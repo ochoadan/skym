@@ -1,0 +1,13 @@
+# Local lab material; never commit real saves, credentials, or game binaries.
+.env
+.env.*
+!.env.example
+local/
+artifacts/
+*.dmp
+*.log
+*.pak
+*.mbin
+*.exe
+*.dll
+*.zip
