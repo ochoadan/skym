@@ -6,7 +6,7 @@ Read this file, `docs/PRODUCT.md`, and `docs/STEPS.md` before work. Read `docs/R
 
 The founding request is to create a new project and research, end to end, a FiveM-style platform for No Man's Sky. Research and documentation are authorized. A planned task does not by itself authorize building, publishing, contacting people, or purchasing services. Follow the latest user request when scope expands; do not request permission again for already authorized work.
 
-Preserve the distinction between independent game servers, servers that own only platform data, and community websites. Do not silently replace the requested game-integrated platform with a companion product. Do not advertise a larger player limit, enforced economy, crossplay mod support, or independent hosting without matching evidence.
+The selected product and the context behind it are in [PRODUCT](docs/PRODUCT.md). Match capability claims to evidence, including player limits, economy enforcement, crossplay, and independent hosting.
 
 ## Fact ownership
 
@@ -16,20 +16,14 @@ Preserve the distinction between independent game servers, servers that own only
 | `AGENTS.md` | Workflow and verification rules |
 | `docs/PRODUCT.md` | Users, intent, scope, product boundaries |
 | `docs/STEPS.md` | Delivery status, dependencies, next tasks, completion evidence |
-| `docs/ROADMAP.md` | End-to-end engineering decomposition and milestone acceptance; no competing status ledger |
+| `docs/ROADMAP.md` | Provisional engineering breakdown, dependencies, and milestone acceptance; no competing status ledger |
 | `docs/RESEARCH.md` | External findings, source freshness, alternatives, cost assumptions |
 | `docs/ARCHITECTURE.md` | Proposed technical design and operational requirements |
 | `docs/EXPERIMENTS.md` | Test procedures, acceptance thresholds, evidence format |
 | `docs/BACKLOG.md` | Conditional later ideas |
 | `DECISIONS.md` | Lasting decisions and reasons |
 
-Update the owner of a changed fact and link to it elsewhere. Rewrite outdated claims. Keep completion records concise. Keep the next five executable tasks detailed in STEPS and the full engineering path in ROADMAP. The playbook's five-task working queue is not a limit on the size of the project plan.
-
-## Engineering approach
-
-The user clarified that the project should progress through construction and problem-solving, starting with a server and one connected player. Count a runnable service, a real one-player game connection, persistent reconnect, two-player synchronization, and stronger game control as separate useful milestones. Server player count, dedicated/listen hosting mode, and simulation authority are separate dimensions. Do not require full native-engine simulation, multiple players, or an always-running world before acknowledging an earlier milestone.
-
-Use experiments to implement and debug the next capability. When an approach fails, record the specific failure, alternatives, and next bounded change. Do not automatically stop the whole project, demand interviews before technical work, or pivot to a companion app. Escalate a constraint when concrete evidence requires a product/budget/rights decision; do not promise that engineering can guarantee every desired outcome.
+Update the owner of a changed fact and link to it elsewhere. Rewrite outdated claims and keep completion records concise. STEPS holds the next few detailed tasks, currently five; ROADMAP holds the longer-range plan. Keep task IDs stable when revising, splitting, or retiring work, with changed scope recorded in STEPS.
 
 ## Research and implementation
 
@@ -49,9 +43,9 @@ Use `rg --files` to inspect the file map and `git diff --check` for tracked chan
 
 When code is introduced, add exact install, run, and verification commands here in the same change. Select tests for observable behavior and risks, not mechanical copies of the implementation.
 
-## First build and handoff
+## Implementation and handoff
 
-Start authorized implementation with T-04.1 / R-001–R-010. Select the minimal service toolchain from the local environment, pin its SDK/dependency versions, and record the choice. M-01 can use in-memory state; persistence belongs to the next milestone's work. Keep the service, protocol contract/fixtures, diagnostic client, and later game adapter separated so the service can be developed without game access. Introduce exact paths with the scaffold rather than pre-creating empty projects.
+Use STEPS for the current implementation entry point and its prerequisites. Record selected tooling and pin SDK/dependency versions when introducing code. The proposed component boundaries and transport policy are in ARCHITECTURE.
 
 Add a repeatable local build/test command with the first runnable code. Run ordinary protocol and service tests without proprietary game files; native integration evidence requires the actual game environment. Add an automated build/test workflow when the repository's hosting is configured, reusing the same local commands. Check dependency/license changes when selecting packages rather than freezing an arbitrary stack in the planning documents.
 

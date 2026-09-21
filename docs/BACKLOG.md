@@ -2,7 +2,7 @@
 
 These ideas are not scheduled or authorized by their presence here. Current work and dependencies belong to [STEPS](STEPS.md).
 
-B-01, the operator-run dedicated community runtime, is now classified as core work in [ROADMAP](ROADMAP.md), with runnable service, one-player integration, persistence, and dedicated deployment milestones. It is no longer an optional idea waiting for a general feasibility decision. This classification does not claim it has been implemented.
+B-01, the operator-run dedicated community runtime, is classified as core work in [ROADMAP](ROADMAP.md), with proposed service, one-player integration, persistence, and dedicated deployment milestones. It has not been implemented.
 
 | ID | Idea | Select only when |
 | --- | --- | --- |

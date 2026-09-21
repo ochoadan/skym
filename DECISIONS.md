@@ -10,7 +10,7 @@ Date: 2026-09-20. The goal is community-controlled, game-integrated multiplayer.
 
 ## D-003 — Establish authority before committing to platform implementation (superseded by D-006)
 
-Date: 2026-09-20. The initial recommendation emphasized feasibility before implementation. The user clarified that this obscured the construction path and undervalued a one-player server. D-006 replaces this sequencing. Existing technical findings remain in RESEARCH.
+Date: 2026-09-20. The initial recommendation emphasized feasibility before implementation. The user clarified that this obscured the construction path and undervalued a one-player server. D-006 replaces this planning approach. Existing technical findings remain in RESEARCH.
 
 ## D-004 — Keep external progress distinct from official game state
 
@@ -20,14 +20,14 @@ Date: 2026-09-20. The proposed first contract uses a platform-owned ledger. Offi
 
 Date: 2026-09-20. Windows/Steam is the initial lab assumption, not a promise of platform coverage. Hosting vendor, scripting engine, client technology, public license, and brand remain unselected. Reusing FiveM source or community libraries requires the actual selected license review. The research includes alternatives without freezing speculative dependencies.
 
-## D-006 — Build incrementally from one player to the full community platform
+## D-006 — Recognize useful increments toward the community platform
 
-Date: 2026-09-20. In response to the user's correction, a runnable service and a one-player game/server loop are explicit completed outcomes when verified. Persistence, two-player synchronization, admission, scripting, and stronger game authority follow as distinct capabilities. Experiments support engineering decisions rather than imposing a general stop/pivot checkpoint. Dedicated/listen hosting, player count, and simulation scope are evaluated separately. This supersedes D-003 and is applied in PRODUCT, ARCHITECTURE, and EXPERIMENTS.
+Date: 2026-09-20; framing clarified 2026-09-21. A runnable service and a one-player game/server loop have explicit acceptance definitions because the initial plan undervalued those outcomes. Persistence, synchronization, admission, scripting, and stronger authority are distinct capabilities. Hosting mode, player count, and simulation scope describe different properties. This supersedes D-003; it does not select an unchangeable implementation order or settle how to respond to future failures. The context is recorded in PRODUCT and the proposed milestones in ROADMAP.
 
-## D-007 — Show the full roadmap and keep a small active queue
+## D-007 — Show the longer-range roadmap and keep a small active queue
 
-Date: 2026-09-20. ROADMAP owns the long-range engineering breakdown; STEPS owns progress and the next five executable tasks. The original five tasks were broad work packages and are retained as parent records with stable IDs. Detailed child tasks no longer hide the full construction path. This clarifies the playbook structure without treating five as the total project size.
+Date: 2026-09-20; framing clarified 2026-09-21. ROADMAP owns the long-range engineering breakdown; STEPS owns progress and the next few detailed tasks, currently five. The original broad work packages remain parent records with stable IDs. The 140 rows make anticipated work visible; they are neither proof of completeness nor a required count. ROADMAP records which parts have concrete local checks and which depend on untested integration assumptions.
 
-## D-008 — Make the first build independent of game access and future hosting
+## D-008 — Propose a local service as the first build increment
 
-Date: 2026-09-20. Start implementation at T-04.1 / R-001–R-010 with a local service, diagnostic client, and in-memory state. Choose and pin the toolchain in that task. Game integration can proceed alongside it when the installation is available. The loopback lab transport policy is separate from remote encryption requirements. First persisted progression is community-member-owned with stable server IDs; later character ownership is explicit. These rules are applied in AGENTS, STEPS, ARCHITECTURE, and ROADMAP to prevent handoff ambiguity and unnecessary early dependencies.
+Date: 2026-09-20; framing clarified 2026-09-21. A local service, diagnostic client, and in-memory state provide an initial software outcome independent of game access and future hosting. T-04.1 / R-001–R-010 is therefore the proposed entry point in STEPS, with tooling selected during that work. The loopback lab policy, encrypted remote transport, and stable community-member ownership remain technical requirements in ARCHITECTURE. The user's note, *Expressing Intent Without Prescribing Behavior*, prompted removal of duplicated sequencing and failure-response instructions; it did not supply a replacement behavioral formula.

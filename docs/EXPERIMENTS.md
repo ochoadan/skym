@@ -1,8 +1,8 @@
 # Engineering experiments and verification
 
-These are **procedures to run as capabilities are built**, not recorded results. [STEPS](STEPS.md) owns status, and [ROADMAP](ROADMAP.md) owns the full construction path. All thresholds below are proposed acceptance targets, not measured performance. Experiments isolate engineering problems and verify completed behavior. A failure identifies work to fix or another approach to try; it does not automatically stop the project.
+These are **proposed procedures for testing capabilities**, not recorded results. [STEPS](STEPS.md) owns status, and [ROADMAP](ROADMAP.md) owns the provisional construction plan. All thresholds below are proposed acceptance targets, not measured performance. Results provide evidence about a specific approach and may affect its implementation, the architecture, or the planned scope.
 
-IDs are stable references, not mandatory execution order. Start with E-01a, the needed parts of E-02/E-03, and the one-player loop E-10. Service development and original-data E-05 checks can run in parallel. Add E-01b/E-04 when a second player is needed, then enforcement, dedicated rule behavior, and broader operation. A two-client lab is not a prerequisite for the initial service or one-player milestone.
+IDs are stable references. The current queue uses E-01a, the needed parts of E-02/E-03, and the one-player loop E-10. E-05 includes checks that can use original data without a game client. E-01b/E-04 need multiple game clients. Later tests cover enforcement, independent rule behavior, and broader operation; their prerequisites differ by the claim being tested.
 
 ## Lab prerequisites and evidence
 
@@ -100,7 +100,7 @@ On return, the client must see the persisted state and the correct eligibility r
 
 **Acceptance:** The tested rule's authoritative state survives the client-free interval according to its declared timing policy; the returning game client presents the resulting entity correctly; operator admission/enforcement holds within the tested boundary; no native duplicate owner or overwritten state occurs. A timer/database demonstration without functioning in-game integration does not suffice. Scheduled database work is a valid implementation for suitable rules. One entity class passing establishes that feature; other game systems need separate work.
 
-This checks independently advancing gameplay for the tested feature. A persistent server with idle or paused state need not implement continuous simulation to remain a useful server. If the test fails, document and repair the failing operation or choose another ownership approach. Retain the completed one-player/server milestones; reserve a product decision for a demonstrated constraint or proposed scope change.
+This checks independently advancing gameplay for the tested feature. A persistent server with idle or paused state has a different acceptance scope. An E-07 result establishes evidence about the tested ownership and timing model; it does not by itself establish or disprove every other server capability.
 
 ## E-08 — Verify operation by another creator and operator
 
@@ -150,4 +150,4 @@ Use request IDs in the game and server logs to correlate the round trip. Complet
 | E-07 plus admission/enforcement | Narrow independent game-simulation proof, not whole-game compatibility |
 | E-08/E-09 and resolved release conditions | Basis for a limited public pilot with explicit supported scope |
 
-Technical milestones and release/business work progress on separate tracks. Technical success does not complete commercial permission, operator demand, entitlement access, or release-readiness work. For a failed test, record the failure and the next implementation hypothesis while preserving already completed capabilities. A smaller companion product remains a user choice, not the default response to difficulty.
+Technical success does not establish commercial permission, operator demand, entitlement access, or release readiness. Those questions have separate evidence. The report format above records both the observed result and its limits; an experiment alone does not determine the appropriate project-level response.

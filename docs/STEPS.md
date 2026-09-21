@@ -1,14 +1,14 @@
 # Delivery status and next work
 
-Updated: 2026-09-20.
+Updated: 2026-09-21.
 
 ## Current status
 
-The local research project exists. The user selected persistent community servers with custom rules, economies, and roleplay, then clarified that construction should start with a server and one player and show the full path to the end product.
+The local research project exists. [PRODUCT](PRODUCT.md) records the selected experience and the context behind the user's request for a visible construction path and a useful one-player outcome.
 
-[ROADMAP](ROADMAP.md) contains the end-to-end engineering decomposition. This file owns actual progress and the next five executable tasks. The original T-01 through T-05 were broad work packages, not five implementation steps; they remain stable parent records below. Experiments are tests used while implementing those tasks.
+[ROADMAP](ROADMAP.md) contains the provisional engineering breakdown and its uncertainty by workstream. This file owns actual progress and the next five detailed tasks. The original T-01 through T-05 were broad work packages, not five implementation steps; they remain stable parent records below. Experiments supply proposed checks for those tasks.
 
-No launcher, adapter, runtime, or game integration has been implemented or run. No interviews, publisher outreach, deployment, purchase, or public release have occurred. Implementation has not started. The immediate build entry point is T-04.1, with T-03.1 in parallel when the owned game installation is available.
+No launcher, adapter, runtime, or game integration has been implemented or run. No interviews, publisher outreach, deployment, purchase, or public release have occurred. Implementation has not started. The proposed build entry point is T-04.1, with T-03.1 in parallel when the owned game installation is available. The 2026-09-21 revision concerns planning documents only.
 
 The handoff is stored in this local Git repository; Git history owns checkpoint hashes and commit state. No remote repository is configured, so there is no verified remote backup. Game installation path/build and the actual development SDK versions have not been recorded; neither is needed to preserve this documentation checkpoint. Select and verify the service toolchain at R-001, and record the game environment at R-011.
 
@@ -31,17 +31,17 @@ Acceptance definitions live in ROADMAP; this table records status only.
 
 | Stable ID | Scope | Status and relationship |
 | --- | --- | --- |
-| T-01 | Research-backed project foundation | Completed; evidence below. ROADMAP expansion records the user's clarified engineering sequence |
+| T-01 | Research-backed project foundation | Completed; evidence below. ROADMAP expansion makes the proposed construction work visible |
 | T-02 | Operator discovery and scoped permissions/release work | Prepared questions only; runs alongside engineering. Interviews and monetization approval are not prerequisites for an original local service |
 | T-03 | Local game, content, and later multiplayer baselines | Not started; T-03.1 supplies the first single-player baseline, later children add content and multiple clients |
-| T-04 | Implement server, game integration, persistence, synchronization, and operator control | Not started; split into children and ROADMAP work. A failed adapter attempt leads to a specific diagnosis and next change |
+| T-04 | Implement server, game integration, persistence, synchronization, and operator control | Not started; split into children and ROADMAP work. Adapter route and achievable control remain unverified |
 | T-05 | Reusable creator/operator platform, pilot, and release | Not started; follows the capabilities it actually uses. Detailed future decomposition is in ROADMAP |
 
 These parent IDs supersede the original coarse queue without renumbering its references. Completing a child completes that child only. The remaining core work is visible in ROADMAP and is not hidden in the optional backlog.
 
 ## Next five executable tasks
 
-Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 covers R-021–R-030; T-04.4 covers R-031–R-040. Promote additional detail as each task begins and record partial row completion here; the original 140 rows remain visible in ROADMAP.
+Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 covers R-021–R-030; T-04.4 covers R-031–R-040. These are the current proposed increments. The service has a concrete local verification path; the game-dependent tasks still need a supported operation and adapter route. Their build details may change with those findings.
 
 - [ ] **T-03.1 — Establish one owned game installation and a repeatable local baseline.**
   Needs: Access to one owned Windows NMS installation and a disposable save. A second player is not required.
@@ -79,7 +79,7 @@ Server software, protocol fixtures, data models, and tests with original data ca
 
 Keep relevant code/content licenses and any concrete restrictions attached to the operation they affect. Publisher clarification, public entitlement access, interviews, naming, privacy responsibilities, distribution, hosting, and commercialization are distinct workstreams. Resolve required release conditions before the affected release. Do not require a commercial-launch agreement merely to write an original local server or document native game behavior. Outreach still needs a user instruction to contact people.
 
-For a failed implementation, record the smallest failing behavior, likely causes, alternatives, and next bounded change. Completed service and one-player milestones remain completed. If concrete evidence requires a product, investment, or rights decision, state it precisely; do not silently replace the requested platform with a companion app.
+No failed implementation has been observed yet. The main open technical questions are which interaction can be exposed safely, what state the external runtime can control, and how that control relates to native sessions. These findings may change the task breakdown, dependencies, or proposed architecture.
 
 ## Completion evidence
 
@@ -91,3 +91,4 @@ For a failed implementation, record the smallest failing behavior, likely causes
 | 2026-09-20 | Engineering review | One-player/idle-server criteria reviewed; added explicit operational identity and encrypted remote transport work, corrected token-theft claims, and kept independent-feature testing separate from two-player synchronization |
 | 2026-09-20 | Build handoff review | No missing major workstream found; first-build entry point, in-memory M-01 scope, pinned tooling/local tests, loopback/remote transport boundaries, stable member ownership, and exact next-session instructions recorded. Eleven Markdown files, 40 relative links, 140 roadmap IDs, five queue items, balanced fences, and Git whitespace checks passed before checkpointing |
 | 2026-09-20 | Implementation limits | No executable platform, game run, performance result, interview, or release; engineering acceptance thresholds remain planned |
+| 2026-09-21 | Intent and planning revision | Removed duplicated failure-response and fixed-order instructions; preserved product, trust, and evidence requirements. Independent review found no actionable inconsistencies. Checked 11 Markdown files, 42 relative links, balanced fences, 140 unchanged roadmap task rows across 14 stages, five queue tasks, ten experiment IDs, and Git whitespace. Documentation only; no application tests or new external-source verification |

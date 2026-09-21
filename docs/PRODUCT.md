@@ -6,7 +6,13 @@ Enable communities to create distinct, persistent multiplayer experiences inside
 
 The user's request is broader than distributing mods: recreate the platform model for this game. The user explicitly selected persistent community servers with custom rules, economies, and roleplay as the priority on 2026-09-20. Creator-authored activities serve that experience. A universal MMO is a separate expansion hypothesis. No public name, commercial model, vendor, or release date is selected.
 
-External capability findings belong to [RESEARCH](RESEARCH.md). The full engineering path belongs to [ROADMAP](ROADMAP.md), and delivery state belongs to [STEPS](STEPS.md).
+External capability findings belong to [RESEARCH](RESEARCH.md). The proposed engineering path belongs to [ROADMAP](ROADMAP.md), and delivery state belongs to [STEPS](STEPS.md).
+
+## Context behind the direction
+
+The user found the initial five-part plan too focused on deciding whether to proceed. It obscured the construction work between research and a usable platform. They expected a substantial engineering effort and considered operating a server with one player a useful early outcome. The expanded roadmap made that work visible; the user has not specified a required task count, fixed implementation order, or commitment to pursue every approach regardless of what is learned.
+
+The later note, *Expressing Intent Without Prescribing Behavior*, raised a concern about explanations becoming standing instructions detached from the situation that prompted them. It describes an unresolved problem with communicating intent; it does not propose a prompting method that guarantees good judgment.
 
 ## Users and jobs
 
@@ -32,20 +38,18 @@ For platform currency, a client cannot mint rewards by editing its local save or
 5. Players can install, update, join, leave, and restore their original setup reliably.
 6. Another operator and another creator can use the documented system without its authors intervening.
 
-Operators should own a deployable server, its community rules, and persistent records. The design may delegate rendering, physics, or other declared work to game clients; replacing the entire game engine is not a requirement. Dependence on native sessions or official services must be explicit, particularly where it affects admission or rule enforcement. A companion service remains an alternative requiring a product decision, not an automatic destination after a failed implementation attempt.
+Operators should own a deployable server, its community rules, and persistent records. The design may delegate rendering, physics, or other declared work to game clients; replacing the entire game engine is not a requirement. Dependence on native sessions or official services must be explicit, particularly where it affects admission or rule enforcement. A companion service is a different product scope from the selected game-integrated platform.
 
-## First product milestone: one player and their server
+## Proposed first playable milestone: one player and their server
 
-The user should be able to start their own server, connect one running NMS client, perform a small in-game action, and see a response determined by server configuration/state. Changing that configuration should change the result inside the game. The following milestone adds persistent reconnect and server restart; the next adds a second player.
+The user can start their own server, connect one running NMS client, perform a small in-game action, and see a response determined by server configuration/state. Changing that configuration changes the result inside the game. This defines the intended outcome; the interaction and adapter route remain unselected.
 
 A one-player server is a legitimate engineering and personal-use outcome. A standalone server process with a test client is also useful earlier progress. Each is evaluated against its actual behavior. Neither needs to deliver every multiplayer, security, hosting, or simulation feature of the eventual platform to count as completed work.
 
 Support for a server process alongside the player's game and, potentially, a listen-server mode can be evaluated as hosting options. Dedicated operation means the server process can operate separately from the player client; it does not require continuous simulation of all planets while nobody is connected. Persisted state can remain idle, pause specified timers, or compute elapsed-time effects on reconnect according to the resource's declared rules.
 
-## Initial boundaries
+## Product boundaries
 
-- Target initial implementation at one Windows PC storefront and an exact game build; Steam is the default lab assumption. Other PC stores, Proton, VR, macOS, and consoles require separate compatibility evidence.
-- Start with a standalone service and one narrow game-client integration. Add persistence, a second client, and then broader control and concurrency; do not set a marketed slot count from another game's technology or historical NMS advertising.
 - Start with original or explicitly licensed test content. Preserve existing mod creators' distribution choices and attribution.
 - Keep community identities, contract state, and platform currency separate from official Units, Nanites, Quicksilver, discoveries, and cloud saves.
 - Make resource permissions visible. Ordinary downloadable resources should not receive unrestricted native execution on a player's PC.
@@ -59,8 +63,8 @@ A seamless MMO; hundreds of players in one scene; console injection; replacing t
 
 These boundaries constrain the first implementation, not the long-term exploration. Later ideas and the evidence needed to select them belong to [BACKLOG](BACKLOG.md).
 
-## Engineering progression
+## Current implementation proposal
 
-Initial success is a working one-player server interaction, followed by persistent state and multi-client behavior. Milestone acceptance is in ROADMAP; [EXPERIMENTS](EXPERIMENTS.md) supplies repeatable checks. Claims grow with the implemented behavior, and earlier milestones remain valid when a later feature is unfinished.
+The current route starts with a standalone service and a narrow game adapter, then combines them into the one-player interaction. Persistence and a second client extend that loop. The service can be developed without game access, while adapter work investigates the project's largest technical uncertainty. This is the present engineering proposal; its order and design depend on what the integration supports.
 
-When an adapter or networking approach fails, diagnose the failing operation, try an alternative integration or ownership model, and preserve working components. Revise the implementation path without silently reducing the product goal. A demonstrated hard constraint or unacceptable ongoing cost may eventually require a user decision; an unanswered question alone is not such a decision. Keep major polish and marketplace work behind the core game integration so effort continues to address the product's central engineering problems.
+Windows on one exact Steam build is the initial lab assumption. The installed game environment and service toolchain have not yet been assessed. Other storefronts and platforms would add their own integration and compatibility work. Milestone acceptance and planning uncertainty are in ROADMAP; [EXPERIMENTS](EXPERIMENTS.md) supplies proposed checks.

@@ -2,22 +2,20 @@
 
 Research date: **20 September 2026**. User priority: persistent community servers with custom rules, economies, and roleplay. This is desk research from publisher, platform-vendor, and project-maintainer sources. No game experiments, operator interviews, or legal consultations were performed. Actual project status belongs to [STEPS](STEPS.md).
 
-## 1. Recommendation
+## 1. Findings and current engineering proposal
 
-**Develop the platform through small working increments, starting with a server and one real game client.** Build the service, connect a bounded game interaction, persist its state, add a second player, and expand game control. The most consequential engineering unknown is how the external server gains reliable control over each desired gameplay operation. Address those operations early while allowing independent service work to proceed.
+**The most consequential engineering unknown is how an external server gains reliable control over each desired gameplay operation.** The current proposal pairs a standalone service with a narrow game adapter, combines them into one playable interaction, then extends persistence and multiplayer behavior. This allows ordinary service development alongside investigation of the game boundary. It is an engineering proposal, not a verified integration route.
 
 The public sources reviewed establish a functioning mod ecosystem and several approaches to client hooks. They do not establish a supported, current, independently operated NMS multiplayer runtime comparable to FXServer. No public Hello Games dedicated-server binary, headless simulation interface, or stable multiplayer mod SDK was identified. This is a search result, not proof that a solution is impossible.
 
-The first game-integrated milestone is one player performing an action, the server choosing a response, and the game displaying/applying it. That is a useful server outcome. Persistence, two-player synchronization, admission, and stronger rule enforcement follow as distinct milestones. A server does not need multiple connected players, complete anti-cheat, or continuous simulation of the whole world to be meaningful. Its claims should describe the actual implemented behavior. [ROADMAP](ROADMAP.md) gives the full engineering path; [EXPERIMENTS](EXPERIMENTS.md) supplies tests during construction.
-
-The user clarified this sequence after the initial report. The lack of a discovered ready-made server SDK identifies integration work; it does not establish that the product is unbuildable. Failed approaches should trigger diagnosis and alternative implementations. A demonstrated hard constraint can still require a scope or investment decision, and the current research cannot guarantee every desired capability.
+The intended outcome and context behind the one-player milestone are in [PRODUCT](PRODUCT.md). [ROADMAP](ROADMAP.md) sets out the proposed work and its uncertainty; [EXPERIMENTS](EXPERIMENTS.md) supplies proposed tests. None of the source findings establishes that every desired capability can be delivered or how much integration work it will take.
 
 Three outcomes must remain distinct:
 
 | Path | What the operator actually controls | Assessment |
 | --- | --- | --- |
-| Independent multiplayer platform | Admission, declared simulation/rules, replicated entities, persistent state, resource lifecycle | Requested long-term direction; build progressively and verify each integration boundary |
-| Hybrid game extension | Platform state and selected client-integrated rules; native sessions still supply some multiplayer | Can be a useful intermediate implementation; disclose dependencies and continue work toward intended operator control |
+| Independent multiplayer platform | Admission, declared simulation/rules, replicated entities, persistent state, resource lifecycle | Requested long-term direction; its integration boundaries remain unverified |
+| Hybrid game extension | Platform state and selected client-integrated rules; native sessions still supply some multiplayer | Possible intermediate implementation; remaining native dependencies limit operator control |
 | Companion RP service | Accounts, contracts, manual or reported activity, community records, overlay | Technically approachable and already has competition; a reduced-scope alternative requiring an explicit product decision |
 
 ## 2. What FiveM actually provides
@@ -97,7 +95,7 @@ No market-size, conversion, revenue, or willingness-to-pay estimate is establish
 
 Proposed discovery sample: five active community operators, three mod authors, and ten players. Ask for a recent failed event, exploit, installation problem, or moderation incident; the current workaround; measurable time lost; the minimum in-game control required; willingness to install a native bridge; and willingness to maintain a pilot. These are future interviews, not work already done.
 
-Suggested early continuation signal: three operators independently describe the same unmet need, two commit to hosting a pilot, and one outside creator can build a resource. The user can revise these thresholds. If all desired functions are already supplied by native alliances plus existing tools, revisit the product before building.
+Possible discovery signals include repeated unmet needs across operators, willingness to host a pilot, and an outside creator successfully building a resource. These would inform the audience, feature priorities, and operating model. No demand threshold has been selected as a condition for local implementation; the sample sizes above are research planning assumptions.
 
 ## 6. Rules, economics, and trust
 
@@ -148,7 +146,7 @@ Use the official [contact page](https://www.nomanssky.com/contact/) to identify 
 | Public release | Signed distribution, compatibility reporting, moderation, restoration, onboarding, and support | Release supported scope with its required external conditions resolved |
 | Optional commercial service | A permitted offer with paying operator demand and measured costs | Price from support and operating data |
 
-The full core implementation is decomposed in [ROADMAP](ROADMAP.md). Only the next five tasks receive immediate execution detail in [STEPS](STEPS.md); this is a working queue, not the total project scope. Optional expansion belongs to BACKLOG. No phase date is promised by this sequence.
+Anticipated core work is mapped in [ROADMAP](ROADMAP.md), with uncertainty described by workstream. The next few tasks receive immediate execution detail in [STEPS](STEPS.md). Optional expansion belongs to BACKLOG. This sequence is provisional and has no promised phase dates.
 
 ## 9. Team, effort, and cost scenarios
 
@@ -197,4 +195,4 @@ High-change sources: the NMS release log, compiler/hook releases, dependency lic
 
 Public-source search coverage included Hello Games releases/terms/support, Microsoft NMS/PlayFab material, Cfx documentation and licensing, NMS tooling repositories, community sites, and mod catalogs. No direct access to Hello Games' implementation or internal SDKs was available. The precise current network topology, authoritative state ownership, supported private-server route, arbitrary-mod replication, session caps, and enforceable rule surface remain unresolved.
 
-The next implementation sequence is a running service, a minimal game adapter, and the one-player interaction in E-10. Use [the experiments](EXPERIMENTS.md) to debug and verify each increment. Commercial discovery, permissions, and release preparation remain explicit parallel workstreams; they do not turn every local engineering task into a general feasibility checkpoint.
+The current implementation proposal and its prerequisites are in STEPS. Commercial discovery, permissions, and release preparation address additional questions whose relevance depends on the selected design and activity. This document's external findings retain their 2026-09-20 review date; the 2026-09-21 planning revision adds no new source verification.

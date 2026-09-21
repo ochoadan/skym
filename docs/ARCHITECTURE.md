@@ -4,7 +4,7 @@ This document describes a **design to test**, not implemented software or a vali
 
 ## Construction sequence and hosting options
 
-Start by building a runnable server process. Add one real NMS client and a bounded in-game request/response, then durable reconnect, then two-client synchronization. These are individually useful engineering outcomes. [ROADMAP](ROADMAP.md) defines M-01 through M-08 and the complete task breakdown; a later milestone does not invalidate earlier completed work.
+The current proposal starts with a runnable server process, adds one real NMS client and a bounded in-game request/response, then extends that loop with durable reconnect and two-client synchronization. This separates ordinary service work from the unverified game bridge. [ROADMAP](ROADMAP.md) defines the proposed milestones and records uncertainty across the task breakdown.
 
 Player count, hosting mode, and authority are separate design choices:
 
@@ -16,7 +16,7 @@ Player count, hosting mode, and authority are separate design choices:
 | Gameplay authority | One bounded in-game response controlled by the server | Admission, adversarial enforcement, and more entity/rule classes |
 | When empty | Retain state; pause work or apply declared elapsed-time rules on return | Continuous background simulation only for resources that require it |
 
-A one-player server is valid. A listen server is valid but depends on its hosting game process. A separate community service can be useful before it controls native multiplayer admission. Describe those behaviors precisely; full-world headless simulation is not the threshold for calling the service milestone complete.
+A listen server depends on its hosting game process. A separate community service may control its own records while still depending on native sessions for game admission. These distinctions affect hosting and enforcement claims independently of player count.
 
 ## 1. Separate community services from game simulation
 
@@ -141,7 +141,7 @@ A standalone service retaining roleplay balances is a valid community-server com
 
 Publish the demonstrated boundary as a list of server-owned, client-delegated, and native-owned behavior. Passing one interaction or timed object never implies independent NPC, combat, terrain, or physics simulation.
 
-For an operation that fails, capture a minimal reproduction and test the likely cause: thread/lifecycle misuse, wrong structure/signature, native state overwriting the result, ownership ambiguity, or an unsupported operation. Choose another hook point, isolate a custom entity, change the ownership protocol, or seek a supported interface as the evidence warrants. Track the added work in ROADMAP/STEPS; do not discard the working service or change the product goal automatically.
+Potential adapter failures include thread/lifecycle misuse, a wrong structure/signature, native state overwriting a result, ownership ambiguity, or an unavailable operation. A reproduction helps distinguish these causes. A different hook point, a custom entity, a revised ownership protocol, or a supported interface are candidate approaches whose suitability depends on the observed failure. Some findings could instead undermine the proposed architecture or the cost assumptions behind it.
 
 ## 7. Security and moderation requirements
 

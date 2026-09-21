@@ -1,22 +1,28 @@
 # Engineering roadmap
 
-Updated: 2026-09-20.
+Updated: 2026-09-21.
 
-Build a platform where operators run persistent No Man's Sky communities, creators define meaningful gameplay, and players join those communities inside the game. This is an end-to-end decomposition into **140 engineering tasks across 14 stages**, from the first server process to a supported public release. It is a plan, not a list of completed work or a claim that the game integration already exists.
+The intended platform lets operators run persistent No Man's Sky communities, creators define meaningful gameplay, and players join those communities inside the game. This provisional plan contains **140 engineering tasks across 14 stages**, from the first server process to a supported public release. The count describes the current breakdown; it does not establish completeness, effort, cost, or whether every proposed integration can be delivered.
 
-[PRODUCT](PRODUCT.md) owns the intended experience. [STEPS](STEPS.md) owns actual delivery status, completion evidence, and only the next five detailed implementation tasks. This document owns the longer sequence and its acceptance criteria. [ARCHITECTURE](ARCHITECTURE.md) owns the proposed design; [EXPERIMENTS](EXPERIMENTS.md) provides repeatable procedures for difficult integrations; [RESEARCH](RESEARCH.md) owns external claims and sources.
+[PRODUCT](PRODUCT.md) owns the intended experience and the context behind this plan. [STEPS](STEPS.md) owns actual delivery status, completion evidence, and the next few detailed implementation tasks. This document owns the longer-range breakdown and proposed acceptance criteria. [ARCHITECTURE](ARCHITECTURE.md) owns the proposed design; [EXPERIMENTS](EXPERIMENTS.md) provides repeatable procedures for difficult integrations; [RESEARCH](RESEARCH.md) owns external claims and sources.
 
-## How to use this plan
+## Planning confidence and open dependencies
 
-One player connecting to their own server is a valid milestone. The number of connected players does not determine whether software is a server. First make the service run, then make a real game client use it, then retain state across restarts, then add a second player and expand control. A synthetic client helps build server software; the in-game milestone specifically requires a running retail game and its adapter.
+The first proposed route is a standalone service, one real game connection, persistent reconnect, and then a second player. The service has a local verification path independent of the game. The playable milestone requires a running retail game and an adapter operation that has not yet been demonstrated.
 
 Hosting mode, game authority, persistence, and player count are separate dimensions. An operator may eventually choose a listen host, a separate server process on their own PC, or a remote dedicated host where the demonstrated integration permits it. Durable state can remain idle while no players are connected and catch up on return. Recreating all native physics, procedural generation, or continuous zero-player simulation is not a prerequisite for every persistent feature.
 
-The difficult work is concentrated in the adapter, native-session ownership, admission, and control over specific game actions. The tasks below expose that work instead of assuming an undocumented API exists. A failed route leads to a diagnosis, a narrower test, or an alternative adapter/hosting design. If the obstacle takes twenty additional tasks, add them and preserve the original task's history. The number 140 is a useful initial decomposition, not an estimate of elapsed time or an upper limit on discovery.
+The workstreams have different levels of definition. A detailed row is a proposed deliverable and check, not evidence that its required game capability is available.
 
-Every row specifies a deliverable and an observable acceptance result. Reference the applicable rows in STEPS when their outcome becomes active; add exact commands, implementation details, and the relevant experiment there. A working-queue task may group several roadmap rows into one bounded outcome. Preserve the R-number when refining a task. New discoveries may add child tasks or new IDs without renumbering the existing plan. Changing a method or dependency is ordinary engineering; changing the promised product requires an explicit product decision. A partial build remains useful and receives its own evidence even when a later capability is still unresolved.
+| Work | What is reasonably concrete now | What remains tentative |
+| --- | --- | --- |
+| R-001–R-010: local service | A configured process, bounded protocol, synthetic client, and observable lifecycle can be specified without game access. | Toolchain, transport, and implementation details await local assessment; no code has been built. |
+| R-011–R-040: adapter, one player, persistence | The desired in-game round trip and restart behavior have explicit proposed checks. Ordinary storage work can use original fixtures. | The first game operation, hook route, lifecycle constraints, and reliable application of server responses are unverified. |
+| R-041–R-060: synchronization and session control | Shared-state, admission, ownership, and enforcement are necessary capabilities for the selected experience. | This contains the largest architectural uncertainty. Native-session dependencies and available control may change the design, task boundaries, and sequence substantially. |
+| R-061–R-110: resources, economy, installation, tools, RP | The operator/creator workflows and trust concerns identify useful work areas. | API shape, supported mechanics, packages, and interaction design depend on earlier game capabilities and outside-user experience. Specific solutions remain candidates. |
+| R-111–R-140: security, compatibility, operations, release | Security review, recovery, maintenance, pilot evidence, and release preparation are identified workstreams. | Exact tests, capacity targets, costs, operating model, and release scope depend on the implemented system. Security work also belongs in each earlier interface as it is built. |
 
-The stage order is explanatory, not a requirement to finish every earlier row before starting anything later. Follow the dependency map and the prerequisite notes under each stage. Acceptance applies to the declared supported build and feature scope; supporting an additional game system, storefront, or hosting mode requires its own evidence.
+The rows mix intended outcomes with candidate technical choices. Active work receives exact implementation details and evidence in STEPS. New findings may split, replace, retire, or add work while retaining stable references. The dependency map records the current design assumptions, including integration checks that require multiple components; it is subject to the same revisions. Acceptance evidence applies to the tested build and feature scope.
 
 ## Milestones
 
@@ -31,7 +37,7 @@ The stage order is explanatory, not a requirement to finish every earlier row be
 | M-07 — Reliable community pilot | Consenting pilot users play the selected scope; operators complete measured recovery, update, and support exercises. | Evidence for the tested builds, client counts, conditions, and operating model. |
 | M-08 — Public release | The supported package, operator workflow, documentation, release scope, and operating arrangements satisfy recorded release criteria. | Public claims match demonstrated capabilities and applicable distribution rights. |
 
-M-05 does not silently complete independent hosting if the game environment still depends on a native player host. Record that dependence and continue the affected work. Likewise, proving one independent entity class does not prove independence for native NPCs, combat, terrain, or every other game system.
+M-05 establishes the tested admission and rule-control boundary. A remaining native player host is still a hosting dependency. Likewise, proving one independent entity class does not prove independence for native NPCs, combat, terrain, or every other game system.
 
 ## Dependencies and parallel work
 
@@ -78,7 +84,7 @@ flowchart LR
     S13 --> S14[14 Pilot and release]
 ```
 
-The arrows show major integration dependencies, not a ban on parallel preparation. For example, the database, installer, resource sandbox, and diagnostics can advance while a specific game hook is being repaired. Rights and license questions attach to the particular dependency, distribution, access method, or external activity affected; interviews, monetization choices, and a blanket publisher agreement are not prerequisites for every local server task. External outreach and publication follow the session's authorization, not the mere presence of a roadmap row.
+The arrows summarize the proposed integration sequence. For example, final economy enforcement depends on game control, although ledger work can be developed earlier. Independent preparation and prerequisites for the current queue are recorded in STEPS. Authorization for external actions is governed by AGENTS.
 
 ## Stage 1 — Build the standalone community runtime
 
@@ -320,4 +326,4 @@ Release preparation can proceed alongside implementation. Resolve the rights, pr
 
 ## After the first release
 
-Use measured demand, compatibility cost, and demonstrated authority to select the next capability: additional gameplay systems, more hosting independence, further storefronts, larger communities, richer creator tools, or additional RP mechanics. Keep the FiveM-style platform objective visible. A supported early release may expose a narrower tested subset while unresolved parts remain explicit roadmap work; it must not be represented as the completion of capabilities it does not provide.
+Possible later work includes additional gameplay systems, more hosting independence, further storefronts, larger communities, richer creator tools, and additional RP mechanics. Priorities will depend on demand, compatibility cost, and demonstrated authority. A supported early release may expose a narrower tested subset while other product capabilities remain unresolved; its release evidence covers only the delivered scope.
