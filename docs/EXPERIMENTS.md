@@ -10,7 +10,7 @@ Begin with one owned Windows game installation, an exact storefront build, and a
 
 Review the intended scope and applicable terms before invasive integration experiments. Publisher clarification is a separate workstream; it does not block reading documentation or preparing a simulation with original data. Do not use public players or live economies as test subjects. Network-condition changes must affect only the lab clients and be restored afterwards.
 
-A completed experiment produces a redacted Markdown report under `docs/evidence/` with this format:
+A completed experiment produces a dated, redacted `evidence-<date>.md` in its `docs/tasks/<T-ID>/` folder with this format:
 
 ```text
 Experiment ID and run date:
@@ -30,13 +30,13 @@ Scope of the conclusion and remaining unknowns:
 Restoration result:
 ```
 
-Keep raw dumps, credentials, account identifiers, and save files in ignored local storage. An evidence report may link to a controlled artifact location; do not commit those artifacts blindly. No lab report directory is populated until a real run exists.
+Keep raw dumps, credentials, account identifiers, and save files in ignored local storage. An evidence report may link to a controlled artifact location; do not commit those artifacts blindly. Create an evidence report only after a real run.
 
 ## E-01 — Establish local and multiplayer baselines
 
 **Question:** What happens without our integration, and which behaviors already work?
 
-**E-01a, one-client baseline:** Record the installed build and a disposable-save setup. Start the game, load the save, perform the intended interaction, exit, and return. Record relevant files/settings, save behavior, and frame-time conditions for comparison. This supplies the initial adapter baseline without another player. Acceptance: a repeatable local procedure and restoration record; it makes no multiplayer claim.
+**E-01a, one-client baseline — T-03.1 / R-011:** Repeat one native interaction and demonstrate recovery of a disposable checkpoint on an identified installation. [Procedure and acceptance](tasks/T-03.1/README.md#e-01a-procedure-and-acceptance).
 
 **E-01b, later multiplayer baseline:** Add the second game installation when work reaches shared sessions.
 

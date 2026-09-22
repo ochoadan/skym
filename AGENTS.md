@@ -1,6 +1,6 @@
 # Working instructions
 
-Read this file, `docs/PRODUCT.md`, and `docs/STEPS.md` before work. Read `docs/RESEARCH.md` and relevant experiment or architecture sections for technical changes. `CLAUDE.md` points here; this is the authoritative instruction file.
+Read this file, `docs/PRODUCT.md`, and `docs/STEPS.md` before work. Read the selected task record and relevant research, experiment, and architecture sections before technical changes. `CLAUDE.md` points here; this is the authoritative instruction file.
 
 ## Scope
 
@@ -15,15 +15,17 @@ The selected product and the context behind it are in [PRODUCT](docs/PRODUCT.md)
 | `README.md` | Orientation and navigation |
 | `AGENTS.md` | Workflow and verification rules |
 | `docs/PRODUCT.md` | Users, intent, scope, product boundaries |
-| `docs/STEPS.md` | Delivery status, dependencies, next tasks, completion evidence |
+| `docs/STEPS.md` | Current delivery status, dependencies, next actions, and links to completion evidence |
+| `docs/tasks/README.md` | Index of existing task documents |
+| `docs/tasks/<T-ID>/` | Task plans, detailed procedures, dated sources/evidence, and links to relevant architecture and implementation |
 | `docs/ROADMAP.md` | Provisional engineering breakdown, dependencies, and milestone acceptance; no competing status ledger |
-| `docs/RESEARCH.md` | External findings, source freshness, alternatives, cost assumptions |
+| `docs/RESEARCH.md` | Cross-cutting external findings, alternatives, costs, and links to dated source reviews |
 | `docs/ARCHITECTURE.md` | Proposed technical design and operational requirements |
-| `docs/EXPERIMENTS.md` | Test procedures, acceptance thresholds, evidence format |
+| `docs/EXPERIMENTS.md` | Experiment catalog, common lab rules, and evidence format; detailed task procedures are linked |
 | `docs/BACKLOG.md` | Conditional later ideas |
 | `DECISIONS.md` | Lasting decisions and reasons |
 
-Update the owner of a changed fact and link to it elsewhere. Rewrite outdated claims and keep completion records concise. STEPS holds the next few detailed tasks, currently five; ROADMAP holds the longer-range plan. Keep task IDs stable when revising, splitting, or retiring work, with changed scope recorded in STEPS.
+Update each fact's owner and link to it elsewhere. Keep main documents stable: purpose, shared constraints, summaries, status, and navigation. Put step detail in `docs/tasks/<T-ID>/`; label plans, procedures, dated sources, and observed evidence clearly. Link relevant architecture sections and real code paths when they exist. Create or split files only for useful depth; update indexes and incoming links when moving or removing them. Keep task IDs stable; STEPS holds the short queue and ROADMAP the longer-range plan.
 
 ## Research and implementation
 
@@ -39,9 +41,9 @@ Update the owner of a changed fact and link to it elsewhere. Rewrite outdated cl
 
 This foundation contains Markdown and Git configuration; it has no runtime dependencies, package manager, test runner, or deployment target. Do not invent setup or passing application tests.
 
-Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record what was checked and what was not in STEPS.
+Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record detailed checks and limitations in the task/evidence record; link the result from STEPS.
 
-When code is introduced, add exact install, run, and verification commands here in the same change. Select tests for observable behavior and risks, not mechanical copies of the implementation.
+When code is introduced, put exact install, run, and verification commands in its component/task documentation and link that entry point here. Select tests for observable behavior and risks, not mechanical copies of the implementation.
 
 ## Implementation and handoff
 
@@ -49,6 +51,6 @@ Use STEPS for the current implementation entry point and its prerequisites. Reco
 
 Add a repeatable local build/test command with the first runnable code. Run ordinary protocol and service tests without proprietary game files; native integration evidence requires the actual game environment. Add an automated build/test workflow when the repository's hosting is configured, reusing the same local commands. Check dependency/license changes when selecting packages rather than freezing an arbitrary stack in the planning documents.
 
-At a handoff, update STEPS with active task and R-IDs, implementation state, exact commands/results, unresolved failures, game/build requirements if relevant, and the next concrete action. Record partial row completion without marking the parent milestone complete. Put only original/sanitized fixtures in Git; keep runtime databases, credentials, save backups, captures, and downloaded game-derived material under ignored local storage.
+At a handoff, update STEPS with the task/R-IDs, state, next action, and evidence link. Keep commands/results, failures, and build requirements in the linked task record. Record partial completion without marking the parent milestone complete. Put only original/sanitized fixtures in Git; keep runtime databases, credentials, save backups, captures, and downloaded game-derived material under ignored local storage.
 
 Use independent agents for clearly assigned files/components when useful. Agree the shared protocol before parallel server and adapter edits; avoid two agents editing its contract simultaneously. Integrate and verify their changes before recording completion.

@@ -67,4 +67,4 @@ These boundaries constrain the first implementation, not the long-term explorati
 
 The current route starts with a standalone service and a narrow game adapter, then combines them into the one-player interaction. Persistence and a second client extend that loop. The service can be developed without game access, while adapter work investigates the project's largest technical uncertainty. This is the present engineering proposal; its order and design depend on what the integration supports.
 
-Windows on one exact Steam build is the initial lab assumption. The installed game environment and service toolchain have not yet been assessed. Other storefronts and platforms would add their own integration and compatibility work. Milestone acceptance and planning uncertainty are in ROADMAP; [EXPERIMENTS](EXPERIMENTS.md) supplies proposed checks.
+Windows on one exact Steam build is the initial lab target. Other storefronts and platforms add their own compatibility work. [ROADMAP](ROADMAP.md) defines milestones, [EXPERIMENTS](EXPERIMENTS.md) indexes verification, and [STEPS](STEPS.md) links current task records.

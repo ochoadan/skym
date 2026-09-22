@@ -1,35 +1,38 @@
 # NMS Community Platform
 
-Research and project foundation for a FiveM-style multiplayer platform for **No Man's Sky**: independently operated communities, custom game rules, creator scripting, persistent progression, and server administration.
+## What we're building
+
+A FiveM-style platform for **No Man's Sky**, intended to let operators run persistent communities, creators build custom rules and activities, and players join distinct multiplayer experiences with community progression.
 
 The working name describes the project; it is not a cleared public brand. This is an independent project, with no claimed affiliation with Hello Games or Cfx.re.
 
-Start with [the engineering roadmap](docs/ROADMAP.md) for the proposed path from a runnable server to a released community platform, including where the plan depends on untested game integration. The first proposed playable milestone is one player connecting to a server and receiving a meaningful server-controlled response. [The research](docs/RESEARCH.md) explains existing tools, technical unknowns, costs, and external constraints.
+## Current state
+
+The product scope, research foundation, and proposed architecture are documented. [T-03.1 is complete](docs/tasks/T-03.1/evidence-2026-09-21.md#result-and-limits): repeated native game actions, saving and reloading across restarts, and recovery from a backup were verified using a disposable save on one Windows Steam installation.
+
+No platform server, launcher, or game adapter has been implemented. There is no application to install or run yet. [STEPS](docs/STEPS.md#current-status) holds detailed delivery status and completion evidence.
+
+## Next planned work
+
+[T-04.1: the first standalone community server](docs/STEPS.md#current-detailed-tasks) is the next planned build step: a local service with a configurable response, verified through a diagnostic client.
+
+The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. The game integration needed for this remains unverified.
+
+## Getting started and documentation
+
+Open this repository in an editor to review the documents; no game installation or development toolchain is needed for that. For project work, begin with AGENTS, PRODUCT, and STEPS below, then follow the selected task's linked records for procedures, evidence, and implementation entry points as code is added.
 
 | Document | Purpose |
 | --- | --- |
 | [PRODUCT](docs/PRODUCT.md) | Intended users, experience, scope, and success criteria |
+| [STEPS](docs/STEPS.md) | Current delivery status and queued work |
 | [ROADMAP](docs/ROADMAP.md) | Provisional engineering path, milestone outcomes, dependencies, and uncertainty |
-| [RESEARCH](docs/RESEARCH.md) | Dated findings, sources, alternatives, economics, and uncertainties |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Proposed components, authority boundaries, security, and operations |
-| [EXPERIMENTS](docs/EXPERIMENTS.md) | Reproducible engineering tests for implemented capabilities |
-| [STEPS](docs/STEPS.md) | Actual status, evidence, and the next five executable tasks |
+| [RESEARCH](docs/RESEARCH.md) | Dated findings, sources, alternatives, economics, and uncertainties |
+| [EXPERIMENTS](docs/EXPERIMENTS.md) | Experiment catalog, common lab rules, and evidence format |
+| [Task documents](docs/tasks/README.md) | Plans, procedures, sources, evidence, and implementation links by task ID |
 | [BACKLOG](docs/BACKLOG.md) | Conditional later work |
 | [DECISIONS](DECISIONS.md) | Recorded choices, reasons, and revisions |
 | [AGENTS](AGENTS.md) | Working instructions and document ownership |
 
-There is no application to install or start yet. Implementation and release status belong to STEPS. No game executable, proprietary asset, save file, or third-party mod binary is included.
-
-For local review, open this directory in an editor, read the documents above, and run `git diff --check` for whitespace issues. Game experiments require the separately listed lab prerequisites; reading this repository does not require No Man's Sky.
-
-## Start the first implementation session
-
-Open this repository as the working directory. STEPS records the current proposed entry point, T-04.1 / R-001–R-010: a local standalone server and diagnostic client. It can proceed without a game installation. T-03.1 / R-011 records the game baseline when that installation is available. Stack selection is part of the first implementation task.
-
-For a build session scoped to that first increment, the request can be:
-
-> Read AGENTS.md, docs/PRODUCT.md, docs/STEPS.md, and the relevant ROADMAP rows. Implement T-04.1 toward M-01: a standalone loopback server with one configurable interaction and a diagnostic client. Choose and record a suitable toolchain, verify the local behavior, and update STEPS with commands, evidence, remaining work, and the next action.
-
-Session-to-session progress belongs in STEPS, including the active R-IDs, changed files, tests actually run, specific failures, and the next runnable action. See AGENTS for the handoff requirements. The saved Git checkpoint preserves the plan; remote-backup status belongs in STEPS.
-
-Project organization follows the user's [Agent Project Playbook](../../../Desktop/Agent%20Project%20Playbook.md).
+See [LICENSE](LICENSE) for licensing terms.

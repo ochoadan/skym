@@ -1,6 +1,6 @@
 # End-to-end research: a FiveM-style platform for No Man's Sky
 
-Research date: **20 September 2026**. User priority: persistent community servers with custom rules, economies, and roleplay. This is desk research from publisher, platform-vendor, and project-maintainer sources. No game experiments, operator interviews, or legal consultations were performed. Actual project status belongs to [STEPS](STEPS.md).
+Research date: **20 September 2026**, with a **21 September 2026 baseline-only source refresh in section 3**. User priority: persistent community servers with custom rules, economies, and roleplay. This is desk research from publisher, platform-vendor, and project-maintainer sources. Detailed lab evidence belongs to task records; [STEPS](STEPS.md) owns delivery status and links those records.
 
 ## 1. Findings and current engineering proposal
 
@@ -36,7 +36,7 @@ An economy, job framework, or roleplay mode is then built on these capabilities.
 
 ## 3. Current NMS baseline and freshness
 
-The official release log reviewed lists Cosmos 7.03.1, with platform-specific rollout. Cosmos 7.0 was announced on 9 September 2026. A test must record the installed storefront build and executable hash, not simply say it used the latest game. [Release log](https://www.nomanssky.com/release-log/), [Cosmos announcement](https://www.nomanssky.com/2026/09/no-mans-sky-cosmos/), [7.03.1 notice](https://www.nomanssky.com/2026/09/cosmos-7-03-1/).
+Dated release checks and native-baseline sources are kept in the [T-03.1 source review](tasks/T-03.1/sources.md). Installed-build evidence is separate from publisher release labels.
 
 Cosmos already adds alliances, alliance rankings, space-station directorship, and orbital construction. It also extends modding support for trigger actions. These are baseline game capabilities, so an alliance directory or station ownership alone is weak differentiation. The proposed gap is custom enforceable rules, creator APIs, operator control, and durable community progression. That gap is a product hypothesis, not proven customer demand. [Cosmos update](https://www.nomanssky.com/cosmos-update/).
 
@@ -189,10 +189,10 @@ At a hypothetical $25/community/month and $10 variable cost, a $5,000 monthly fi
 
 ## 11. Evidence limits and refresh policy
 
-Sources were reviewed on 2026-09-20. Publisher releases establish documented game behavior; vendor docs establish middleware capabilities; maintainer pages establish advertised tooling and license text. None substitutes for the installed-build tests. Search snippets were used to discover sources, with key claims checked against publisher/maintainer pages or read-only GitHub metadata. Galactic Hub's links page was available in search output but a direct fetch failed; treat it as community-discovery evidence only.
+The original sources were reviewed on 2026-09-20; the linked T-03.1 source review records the limited baseline refresh on 2026-09-21. Publisher releases establish documented game behavior; vendor docs establish middleware capabilities; maintainer pages establish advertised tooling and license text. None substitutes for the installed-build tests. Search snippets were used to discover sources, with key claims checked against publisher/maintainer pages or read-only GitHub metadata. Galactic Hub's links page was available in search output but a direct fetch failed; treat it as community-discovery evidence only.
 
 High-change sources: the NMS release log, compiler/hook releases, dependency licenses, current Creator PLA endpoint, and prices. Recheck them when starting a spike or release. The source dates above deliberately retain historical context instead of calling old documentation current behavior. Do not infer current compatibility from a recent repository commit.
 
 Public-source search coverage included Hello Games releases/terms/support, Microsoft NMS/PlayFab material, Cfx documentation and licensing, NMS tooling repositories, community sites, and mod catalogs. No direct access to Hello Games' implementation or internal SDKs was available. The precise current network topology, authoritative state ownership, supported private-server route, arbitrary-mod replication, session caps, and enforceable rule surface remain unresolved.
 
-The current implementation proposal and its prerequisites are in STEPS. Commercial discovery, permissions, and release preparation address additional questions whose relevance depends on the selected design and activity. This document's external findings retain their 2026-09-20 review date; the 2026-09-21 planning revision adds no new source verification.
+The current implementation proposal and its prerequisites are in STEPS. Commercial discovery, permissions, and release preparation address additional questions whose relevance depends on the selected design and activity. Apart from the baseline sources explicitly refreshed in section 3, external findings retain their 2026-09-20 review date; no other source, tool license, service price, or game capability was reverified during T-03.1 preparation.
