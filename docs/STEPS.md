@@ -1,14 +1,14 @@
 # Delivery status and next work
 
-Updated: 2026-09-21.
+Updated: 2026-09-23.
 
 ## Current status
 
-The research foundation and T-03.1 native baseline are complete. No platform runtime or game integration has been implemented. No task is active; another step requires the user's instruction.
+The research foundation, T-03.1 native baseline and T-04.1 / M-01 standalone service are complete. T-04.2, the game adapter, is next. Evidence and entry points are linked below.
 
 [PRODUCT](PRODUCT.md) defines the goal; [ROADMAP](ROADMAP.md) defines the longer-range plan. This file owns delivery status and the short queue. Detailed records are in the [task index](tasks/README.md).
 
-The handoff is local; no remote repository is configured. A development toolchain has not been selected.
+The handoff is committed locally and not pushed. A GitHub remote and build/test workflow are configured; hosted CI has not run.
 
 ## Milestone status
 
@@ -16,7 +16,7 @@ Acceptance definitions live in ROADMAP; this table records status only.
 
 | Milestone | Status |
 | --- | --- |
-| M-01 — Runnable server lifecycle | Planned |
+| M-01 — Runnable server lifecycle | Complete; [T-04.1 evidence](tasks/T-04.1/evidence-2026-09-23.md#result-and-limits) |
 | M-02 — One real player and in-game server response | Planned |
 | M-03 — Persistent reconnect and restart | Planned |
 | M-04 — Two players sharing state | Planned |
@@ -32,7 +32,7 @@ Acceptance definitions live in ROADMAP; this table records status only.
 | T-01 | Research-backed project foundation | Completed; evidence below. ROADMAP expansion makes the proposed construction work visible |
 | T-02 | Operator discovery and scoped permissions/release work | Prepared questions only; runs alongside engineering. Interviews and monetization approval are not prerequisites for an original local service |
 | T-03 | Local game, content, and later multiplayer baselines | T-03.1 / R-011 / E-01a complete; parent incomplete |
-| T-04 | Implement server, game integration, persistence, synchronization, and operator control | Not started; split into children and ROADMAP work. Adapter route and achievable control remain unverified |
+| T-04 | Implement server, game integration, persistence, synchronization, and operator control | T-04.1 / R-001–R-010 / M-01 complete; parent incomplete. Adapter route and achievable control remain unverified |
 | T-05 | Reusable creator/operator platform, pilot, and release | Not started; follows the capabilities it actually uses. Detailed future decomposition is in ROADMAP |
 
 These parent IDs supersede the original coarse queue without renumbering its references. Completing a child completes that child only. The remaining core work is visible in ROADMAP and is not hidden in the optional backlog.
@@ -44,11 +44,8 @@ Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001�
 - [x] **T-03.1 — Owned installation and repeatable native baseline.**
   R-011 / E-01a. [Plan and procedure](tasks/T-03.1/README.md) · [Evidence](tasks/T-03.1/evidence-2026-09-21.md#result-and-limits).
 
-- [ ] **T-04.1 — Start and operate the first standalone community server.**
-  Needs: Local development tools and an explicit choice of service language for this bounded increment. In-memory state is sufficient for M-01; durable storage selection can wait for R-031. No game installation, multiplayer tester, paid hosting, or operator interview is needed.
-  Build: A separate local service process with configuration, start/stop, health, protocol version, request IDs, one configurable interaction response, and a synthetic protocol client. Choose loopback binding initially; keep original test data separate from game files.
-  Verify: Start on a configured local port, send a request, receive the configured result, change configuration, reject malformed input, and shut down cleanly. Run the reproducible service/contract tests and document exact install/run/test commands in the linked task/component record. This completes service behavior, not yet the game connection.
-  Completed: Not started.
+- [x] **T-04.1 — Start and operate the first standalone community server.**
+  R-001–R-010 / M-01 complete within the in-memory synthetic-client scope. [Implementation and commands](tasks/T-04.1/README.md) · [Evidence and limits](tasks/T-04.1/evidence-2026-09-23.md#result-and-limits). Next: T-04.2.
 
 - [ ] **T-04.2 — Expose one game interaction through a minimal adapter.**
   Needs: T-03.1, the selected adapter/tool's actual capabilities and license, and an appropriate scope for the chosen game operation. The standalone server can be developed in parallel.
@@ -74,7 +71,7 @@ Server software, protocol fixtures, data models, and tests with original data ca
 
 Keep relevant code/content licenses and any concrete restrictions attached to the operation they affect. Publisher clarification, public entitlement access, interviews, naming, privacy responsibilities, distribution, hosting, and commercialization are distinct workstreams. Resolve required release conditions before the affected release. Do not require a commercial-launch agreement merely to write an original local server or document native game behavior. Outreach still needs a user instruction to contact people.
 
-No failed implementation has been observed yet. The main open technical questions are which interaction can be exposed safely, what state the external runtime can control, and how that control relates to native sessions. These findings may change the task breakdown, dependencies, or proposed architecture.
+Game integration has not yet been attempted. The main open technical questions are which interaction can be exposed safely, what state the external runtime can control, and how that control relates to native sessions. These findings may change the task breakdown, dependencies, or proposed architecture.
 
 ## Completion evidence
 
@@ -88,3 +85,4 @@ No failed implementation has been observed yet. The main open technical question
 | 2026-09-20 | Implementation limits | No executable platform, game run, performance result, interview, or release; engineering acceptance thresholds remain planned |
 | 2026-09-21 | Intent and planning revision | Removed duplicated failure-response and fixed-order instructions; preserved product, trust, and evidence requirements. Independent review found no actionable inconsistencies. Checked 11 Markdown files, 42 relative links, balanced fences, 140 unchanged roadmap task rows across 14 stages, five queue tasks, ten experiment IDs, and Git whitespace. Documentation only; no application tests or new external-source verification |
 | 2026-09-21 | T-03.1 / R-011 | Native repeatability and recovery verified; [results, limits, and document checks](tasks/T-03.1/evidence-2026-09-21.md#result-and-limits). Detailed documentation moved under the task |
+| 2026-09-23 | T-04.1 / R-001–R-010 / M-01 | Standalone service and diagnostic client verified; [results, checks and limits](tasks/T-04.1/evidence-2026-09-23.md). No hosted CI or game integration run |

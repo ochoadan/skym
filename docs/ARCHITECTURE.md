@@ -1,6 +1,6 @@
 # Proposed architecture
 
-This document describes a **design to test**, not implemented software or a validated NMS server SDK. External capability evidence belongs to [RESEARCH](RESEARCH.md); test procedures belong to [EXPERIMENTS](EXPERIMENTS.md); delivery state belongs to [STEPS](STEPS.md).
+This document describes a **design to test**, not a validated NMS server SDK. External capability evidence belongs to [RESEARCH](RESEARCH.md); test procedures belong to [EXPERIMENTS](EXPERIMENTS.md); delivery state belongs to [STEPS](STEPS.md).
 
 ## Construction sequence and hosting options
 

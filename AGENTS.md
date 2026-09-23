@@ -25,7 +25,7 @@ The selected product and the context behind it are in [PRODUCT](docs/PRODUCT.md)
 | `docs/BACKLOG.md` | Conditional later ideas |
 | `DECISIONS.md` | Lasting decisions and reasons |
 
-Update each fact's owner and link to it elsewhere. Keep main documents stable: purpose, shared constraints, summaries, status, and navigation. Put step detail in `docs/tasks/<T-ID>/`; label plans, procedures, dated sources, and observed evidence clearly. Link relevant architecture sections and real code paths when they exist. Create or split files only for useful depth; update indexes and incoming links when moving or removing them. Keep task IDs stable; STEPS holds the short queue and ROADMAP the longer-range plan.
+Update each fact's owner and link to it elsewhere. Minimize changes to core Markdown files; keep them focused on purpose, shared constraints, summaries, status, and navigation. Put step detail in `docs/tasks/<T-ID>/`; label plans, procedures, dated sources, and observed evidence clearly. Link relevant architecture sections and real code paths when they exist. Create or split files only for useful depth; update indexes and incoming links when moving or removing them. Keep task IDs stable; STEPS holds the short queue and ROADMAP the longer-range plan.
 
 ## Research and implementation
 
@@ -39,7 +39,7 @@ Update each fact's owner and link to it elsewhere. Keep main documents stable: p
 
 ## Setup and verification
 
-This foundation contains Markdown and Git configuration; it has no runtime dependencies, package manager, test runner, or deployment target. Do not invent setup or passing application tests.
+Standalone service setup, run and verification commands are in [T-04.1](docs/tasks/T-04.1/README.md#setup-build-and-verify). Do not invent passing application tests or game results.
 
 Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record detailed checks and limitations in the task/evidence record; link the result from STEPS.
 
@@ -48,6 +48,8 @@ When code is introduced, put exact install, run, and verification commands in it
 ## Implementation and handoff
 
 Use STEPS for the current implementation entry point and its prerequisites. Record selected tooling and pin SDK/dependency versions when introducing code. The proposed component boundaries and transport policy are in ARCHITECTURE.
+
+Use scripts only when necessary. Implement application behavior in code and use standard toolchain commands for build and execution.
 
 Add a repeatable local build/test command with the first runnable code. Run ordinary protocol and service tests without proprietary game files; native integration evidence requires the actual game environment. Add an automated build/test workflow when the repository's hosting is configured, reusing the same local commands. Check dependency/license changes when selecting packages rather than freezing an arbitrary stack in the planning documents.
 

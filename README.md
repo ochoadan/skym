@@ -10,11 +10,11 @@ The working name describes the project; it is not a cleared public brand. This i
 
 The product scope, research foundation, and proposed architecture are documented. [T-03.1 is complete](docs/tasks/T-03.1/evidence-2026-09-21.md#result-and-limits): repeated native game actions, saving and reloading across restarts, and recovery from a backup were verified using a disposable save on one Windows Steam installation.
 
-No platform server, launcher, or game adapter has been implemented. There is no application to install or run yet. [STEPS](docs/STEPS.md#current-status) holds detailed delivery status and completion evidence.
+A local standalone server and diagnostic client are implemented in C#/.NET. They exercise server-owned interaction state using synthetic clients; no launcher or game adapter has been implemented. [STEPS](docs/STEPS.md#current-status) holds delivery status and completion evidence.
 
 ## Next planned work
 
-[T-04.1: the first standalone community server](docs/STEPS.md#current-detailed-tasks) is the next planned build step: a local service with a configurable response, verified through a diagnostic client.
+[T-04.1](docs/tasks/T-04.1/README.md) documents setup, build, tests and the local server demonstration. The next game-facing task is [T-04.2](docs/STEPS.md#current-detailed-tasks): identify and expose one supported in-game interaction through a minimal adapter.
 
 The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. The game integration needed for this remains unverified.
 

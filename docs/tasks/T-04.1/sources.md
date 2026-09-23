@@ -1,0 +1,44 @@
+# T-04.1 tooling and dependency source review
+
+Reviewed: 2026-09-22. Scope: the original standalone local service, synthetic protocol client, local checks, and proposed GitHub build workflow. These are upstream source observations and engineering selections; installation, build, protocol, and shutdown results belong to this task's observed evidence. No game adapter, hook library, game binary, or game-derived fixture is selected here.
+
+The design boundary is [ARCHITECTURE: construction sequence](../../ARCHITECTURE.md#construction-sequence-and-hosting-options) and [local transport](../../ARCHITECTURE.md#4-protocol-and-persistence). The service uses C# and the .NET/ASP.NET Core shared frameworks, with a console executable for checks. No external application `PackageReference` dependency or separate test framework is planned for this increment. Shared frameworks and build tools still contain upstream dependencies.
+
+## .NET selection and exact source revisions
+
+Microsoft's [download page](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) lists SDK **10.0.401**, including .NET Runtime and ASP.NET Core Runtime **10.0.12**, with a release date of **2026-09-08**. The publisher marks this a security patch. [Release notes](https://github.com/dotnet/core/blob/main/release-notes/10.0/10.0.12/10.0.12.md) provide the corresponding release record. These statements establish the published toolchain, not successful local execution.
+
+Upstream tag references were resolved read-only with `git ls-remote --tags` on 2026-09-22. Each command returned the exact tag and commit below, with no separate peeled-tag entry. Source revisions identify the reviewed upstream repositories; they do not assert that this project rebuilt or reproduced Microsoft's binary SDK distribution.
+
+| Component | Selected tag | Exact upstream commit | License at that commit | Notices at that commit |
+| --- | --- | --- | --- | --- |
+| .NET SDK | `v10.0.401` | [`32593ca81f8aae7b0d41c1a7198529c3365106b8`](https://github.com/dotnet/sdk/commit/32593ca81f8aae7b0d41c1a7198529c3365106b8) | [MIT](https://github.com/dotnet/sdk/blob/32593ca81f8aae7b0d41c1a7198529c3365106b8/LICENSE.TXT) | [THIRD-PARTY-NOTICES.TXT](https://github.com/dotnet/sdk/blob/32593ca81f8aae7b0d41c1a7198529c3365106b8/THIRD-PARTY-NOTICES.TXT) |
+| .NET Runtime | `v10.0.12` | [`4271d88e0aebf3d04f188f1334c2220d80555ef6`](https://github.com/dotnet/runtime/commit/4271d88e0aebf3d04f188f1334c2220d80555ef6) | [MIT](https://github.com/dotnet/runtime/blob/4271d88e0aebf3d04f188f1334c2220d80555ef6/LICENSE.TXT) | [THIRD-PARTY-NOTICES.TXT](https://github.com/dotnet/runtime/blob/4271d88e0aebf3d04f188f1334c2220d80555ef6/THIRD-PARTY-NOTICES.TXT) |
+| ASP.NET Core | `v10.0.12` | [`cb21a42eafcd44cc35fad48d99dc82ff7512ce2f`](https://github.com/dotnet/aspnetcore/commit/cb21a42eafcd44cc35fad48d99dc82ff7512ce2f) | [MIT](https://github.com/dotnet/aspnetcore/blob/cb21a42eafcd44cc35fad48d99dc82ff7512ce2f/LICENSE.txt) | [THIRD-PARTY-NOTICES.txt](https://github.com/dotnet/aspnetcore/blob/cb21a42eafcd44cc35fad48d99dc82ff7512ce2f/THIRD-PARTY-NOTICES.txt) |
+
+All three root licenses identify the .NET Foundation and contributors. Their MIT terms permit use, modification, and redistribution subject to preserving the copyright and permission notices in copies or substantial portions, and disclaim warranties. This is a scoped reading of those files, not a complete distribution clearance.
+
+The SDK repository's notice file contains no listed notices and explicitly acknowledges that third-party resources may use other licenses. The runtime and ASP.NET Core notice files do list other components and terms: examples include Unicode data, zlib-ng, OpenTelemetry, LLVM-derived code, and third-party web libraries. A repository's root MIT license therefore does not describe every file in the installed SDK or every future publish output. Retain upstream license/notice files in any future redistributed runtime bundle and inspect the actual publish inventory before selecting a self-contained distribution. This increment uses an installed framework rather than checking a runtime bundle into Git.
+
+Microsoft's [`global.json` documentation](https://learn.microsoft.com/en-us/dotnet/core/tools/global-json) distinguishes SDK selection from runtime targeting and documents `rollForward: disable` as requiring the exact SDK. Engineering selection: pin SDK 10.0.401 with prereleases disabled, target `net10.0`, and record the actual runtime used in local evidence. A source review or SDK pin alone is not runtime execution evidence. *Superseded 2026-09-23: the exact pins were replaced by a .NET 10 minimum; see the [tooling decision](README.md#tooling-decision--r-001). The review above remains a dated record of 10.0.401/10.0.12.*
+
+## GitHub Actions selection
+
+The GitHub releases API identified [checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1) (published 2026-07-20) and [setup-dotnet v6.0.0](https://github.com/actions/setup-dotnet/releases/tag/v6.0.0) (published 2026-07-16) as the latest stable releases at review time. Their exact tag references were resolved with `git ls-remote --tags`.
+
+| Action | Exact workflow reference | Root license | Bundled dependency notice records |
+| --- | --- | --- | --- |
+| `actions/checkout` v7.0.1 | `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` | [MIT](https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/LICENSE) | [`.licenses`](https://github.com/actions/checkout/tree/3d3c42e5aac5ba805825da76410c181273ba90b1/.licenses) |
+| `actions/setup-dotnet` v6.0.0 | `actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68` | [MIT](https://github.com/actions/setup-dotnet/blob/a98b56852c35b8e3190ac28c8c2271da59106c68/LICENSE) | [`.licenses`](https://github.com/actions/setup-dotnet/tree/a98b56852c35b8e3190ac28c8c2271da59106c68/.licenses) |
+
+Both root licenses identify GitHub and contributors and contain the MIT notice-preservation condition. Their bundles also contain dependencies under other terms. For example, checkout's [semver record](https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/.licenses/npm/semver.dep.yml) declares ISC; setup-dotnet's [minimatch 10.2.5 record](https://github.com/actions/setup-dotnet/blob/a98b56852c35b8e3190ac28c8c2271da59106c68/.licenses/npm/minimatch-10.2.5.dep.yml) declares BlueOak-1.0.0 and includes its notice/link requirement. The upstream [checkout license-check configuration](https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/.licensed.yml) and [setup-dotnet configuration](https://github.com/actions/setup-dotnet/blob/a98b56852c35b8e3190ac28c8c2271da59106c68/.licensed.yml) describe upstream review policies; they are not an independent audit of every bundled dependency. The project references these actions for CI and does not vendor their bundles into the application.
+
+The pinned [checkout README](https://github.com/actions/checkout/blob/3d3c42e5aac5ba805825da76410c181273ba90b1/README.md) and [setup-dotnet README](https://github.com/actions/setup-dotnet/blob/a98b56852c35b8e3190ac28c8c2271da59106c68/README.md) document Node 24 and Actions Runner 2.327.1 or later. Checkout additionally requires Runner 2.329.0 or later for authenticated Git commands in a Docker container action; that feature is unnecessary for the proposed ordinary build job. Setup-dotnet supports reading the pinned SDK from `global-json-file`. Checkout recommends `contents: read`; `persist-credentials: false` avoids retaining its token for later Git commands. These are maintainer descriptions until an actual hosted workflow run is observed.
+
+## Review method and limits
+
+- Primary Microsoft documentation, immutable GitHub license/notice files, release pages, and read-only GitHub release/tree metadata were examined on 2026-09-22. Exact tag hashes came from each upstream repository over HTTPS.
+- This review inspected the selected repositories' root licenses and notice inventories, including representative action dependency records. It is not an exhaustive legal audit of the SDK's compiler/build-tool supply chain or of a future distribution artifact.
+- No software was installed and no application or CI test was run as part of this source review. The task's local evidence must record installation origin/hash, observed versions, commands, failures, and test results separately.
+- No selected tool grants game integration, game redistribution, game-service access, or endorsement. Game adapter dependency selection and exact-commit review belong to T-04.2; public distribution remains a separate activity.
+- Recheck release status, security updates, licenses, and notices when changing any pin or preparing an artifact for distribution. Preserve this dated record rather than silently turning it into a claim about a later version.

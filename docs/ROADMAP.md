@@ -1,6 +1,6 @@
 # Engineering roadmap
 
-Updated: 2026-09-21.
+Updated: 2026-09-23.
 
 The intended platform lets operators run persistent No Man's Sky communities, creators define meaningful gameplay, and players join those communities inside the game. This provisional plan contains **140 engineering tasks across 14 stages**, from the first server process to a supported public release. The count describes the current breakdown; it does not establish completeness, effort, cost, or whether every proposed integration can be delivered.
 
@@ -16,7 +16,7 @@ The workstreams have different levels of definition. A detailed row is a propose
 
 | Work | What is reasonably concrete now | What remains tentative |
 | --- | --- | --- |
-| R-001–R-010: local service | A configured process, bounded protocol, synthetic client, and observable lifecycle can be specified without game access. | Toolchain, transport, and implementation details await local assessment; no code has been built. |
+| R-001–R-010: local service | A configured process, bounded protocol, synthetic client, and observable lifecycle can be specified without game access. | Selected tooling, transport and implementation evidence belong to the task records linked from STEPS. They do not settle the game-facing interface. |
 | R-011–R-040: adapter, one player, persistence | The desired in-game round trip and restart behavior have explicit proposed checks. Ordinary storage work can use original fixtures. | The first game operation, hook route, lifecycle constraints, and reliable application of server responses are unverified. |
 | R-041–R-060: synchronization and session control | Shared-state, admission, ownership, and enforcement are necessary capabilities for the selected experience. | This contains the largest architectural uncertainty. Native-session dependencies and available control may change the design, task boundaries, and sequence substantially. |
 | R-061–R-110: resources, economy, installation, tools, RP | The operator/creator workflows and trust concerns identify useful work areas. | API shape, supported mechanics, packages, and interaction design depend on earlier game capabilities and outside-user experience. Specific solutions remain candidates. |

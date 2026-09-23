@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Community.Protocol/Community.Protocol.csproj" />
+  <Project Path="src/Community.Server/Community.Server.csproj" />
+  <Project Path="src/Community.Client/Community.Client.csproj" />
+  <Project Path="tests/Community.Tests/Community.Tests.csproj" />
+</Solution>

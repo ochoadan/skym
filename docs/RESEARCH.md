@@ -76,7 +76,7 @@ The following are maintainer-documented capabilities. No listed tool was install
 | [NomNom](https://github.com/zencq/NomNom) / [libNOM.io](https://github.com/zencq/libNOM.io) | Save editing, backup/conversion, and save I/O; demonstrates why client save values cannot certify community wealth | [NomNom 7.00.1](https://github.com/zencq/nomnom/releases/tag/7.00.1), 20 Sep 2026; [NomNom GPLv3](https://github.com/zencq/nomnom/blob/main/LICENSE), [libNOM.io GPLv3](https://github.com/zencq/libNOM.io/blob/master/LICENSE); validate library version separately |
 | [NMSSaveEditor](https://github.com/goatfungus/NMSSaveEditor) | Java save-editing application; useful ecosystem reference, not multiplayer authority | No repository license was identified in this review; availability does not establish reuse rights |
 
-**Recommended division of work:** reuse licensed data-conversion tools; evaluate client hooks with their actual scope and maintenance constraints; build an original platform protocol and resource contract only after the necessary game operations are demonstrated. No dependency is selected by this table.
+**Recommended division of work:** reuse licensed data-conversion tools; evaluate client hooks with their actual scope and maintenance constraints; build an original game-facing protocol and resource contract only after the necessary game operations are demonstrated. No dependency is selected by this table.
 
 ## 5. Competition, demand, and differentiation
 

@@ -11,3 +11,6 @@ artifacts/
 *.exe
 *.dll
 *.zip
+**/bin/
+**/obj/
+.vs/

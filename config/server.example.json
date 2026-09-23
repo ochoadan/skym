@@ -1,0 +1,13 @@
+{
+  "bindAddress": "127.0.0.1",
+  "port": 18181,
+  "communityId": "local-lab",
+  "dataDirectory": "data",
+  "completionMessage": "Salvage contract approved by your community server.",
+  "sessionLifetimeSeconds": 900,
+  "adminKey": "",
+  "principals": [
+    { "id": "alice", "key": "" },
+    { "id": "bob", "key": "" }
+  ]
+}

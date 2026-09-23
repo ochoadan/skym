@@ -1,0 +1,11 @@
+{
+  "protocolVersion": 1,
+  "communityId": "__COMMUNITY_ID__",
+  "requestId": "__REQUEST_ID__",
+  "expectedRevision": 0,
+  "commandType": "accept",
+  "payload": {
+    "interactionId": "__INTERACTION_ID__",
+    "reward": 1000000
+  }
+}
