@@ -16,7 +16,10 @@ from pathlib import Path
 import struct
 
 
-EXPECTED_SHA256 = "B7913F268DFC62386B6B68F524BFC8ADE4A44A9F4FBAD39085B7BF51BE3680CB"
+# The single verified adapter/build pairing; the service embeds the same file for admission.
+COMPATIBILITY = json.loads((Path(__file__).resolve().parents[2] / "config" / "adapter-compatibility.json")
+                           .read_text(encoding="utf-8"))
+EXPECTED_SHA256 = COMPATIBILITY["gameSha256"]
 
 # Maintainer-published signatures, NMS.py b41bf9e6fdff1c833b77d805bb0c8da555c4ced4.
 # Only these signature strings are used; no upstream implementation is imported.

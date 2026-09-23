@@ -10,13 +10,13 @@ The working name describes the project; it is not a cleared public brand. This i
 
 The product scope, research foundation, and proposed architecture are documented. [T-03.1 is complete](docs/tasks/T-03.1/evidence-2026-09-21.md#result-and-limits): repeated native game actions, saving and reloading across restarts, and recovery from a backup were verified using a disposable save on one Windows Steam installation.
 
-A local standalone server and diagnostic client are implemented in C#/.NET. An experimental Python adapter now observes a native chat command and displays a local response inside NMS. The server and adapter are not yet connected. [STEPS](docs/STEPS.md#current-status) holds delivery status and completion evidence.
+A local standalone server and diagnostic client are implemented in C#/.NET. An experimental Python adapter connects native chat input to the server and retrieves its response inside NMS. [STEPS](docs/STEPS.md#current-status) holds delivery status, verification limits and completion evidence.
 
-## Next planned work
+## Implementation entry points
 
-[T-04.1](docs/tasks/T-04.1/README.md) documents the local server. [T-04.2](docs/tasks/T-04.2/README.md) documents the active adapter experiment, guards, commands and game checks.
+[T-04.1](docs/tasks/T-04.1/README.md) documents the local server. [T-04.2](docs/tasks/T-04.2/README.md) documents the native adapter guards and disposable-save setup. [T-04.3](docs/tasks/T-04.3/README.md) documents the connected chat operation, commands and game checks.
 
-The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. That server-to-game round trip remains unverified.
+The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. Follow [STEPS](docs/STEPS.md) for the current implementation task and its prerequisites.
 
 ## Getting started and documentation
 

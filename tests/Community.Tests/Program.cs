@@ -35,6 +35,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             Console.WriteLine($"Integration evidence: {Path.GetRelativePath(repository, runDirectory)}");
             await ExerciseInitialization();
             await ExerciseService();
+            await ExerciseAdapter();
             await ExerciseExpiry();
             await ExerciseConfiguration();
             await ExerciseDiagnosticClient();
@@ -297,6 +298,208 @@ internal sealed class IntegrationSuite : IAsyncDisposable
         });
     }
 
+    private async Task ExerciseAdapter()
+    {
+        var server = CreateServer("adapter");
+        var compatibility = AdapterCompatibility.Supported;
+        SessionResponse adapter = null!;
+        SessionResponse diagnostic = null!;
+        SessionResponse bob = null!;
+        InteractionState state = null!;
+        await Check("compatible adapter and legacy diagnostic sessions share only their own principal state", async () =>
+        {
+            await server.Start();
+            adapter = await Connect(server, 0, compatibility);
+            diagnostic = await Connect(server, 0);
+            bob = await Connect(server, 1, compatibility);
+            state = (await Get<StateResponse>(server, "/state", adapter.AccessToken)).State;
+            Require(state.Revision == 0 && state.Status == "available" && state.Message == "", "Adapter did not receive initial principal state.");
+            Require((await Get<StateResponse>(server, "/state", diagnostic.AccessToken)).State == state,
+                "Session scope created a separate principal contract.");
+            // Omission remains valid, in addition to the explicit null sent by existing .NET callers.
+            var legacy = Session(server, 0);
+            var legacyJson = JsonSerializer.Serialize(legacy, Wire.Json).Replace(",\"adapter\":null", "", StringComparison.Ordinal);
+            var admitted = await Send(server, "POST", "/sessions", legacyJson, null);
+            Require(admitted.Status == 200, "Legacy session body without adapter was rejected.");
+            secrets.Add(admitted.As<SessionResponse>().AccessToken);
+        });
+
+        await Check("adapter admission rejects exact version, game, storefront, and operation mismatches", async () =>
+        {
+            var baseline = Session(server, 0) with { Adapter = compatibility };
+            var rejected = new (AdapterCompatibility Value, string Error)[]
+            {
+                (compatibility with { AdapterVersion = "0.1.0" }, "unsupported_adapter"),
+                (compatibility with { AdapterVersion = null! }, "unsupported_adapter"),
+                (compatibility with { GameSha256 = new string('0', 64) }, "unsupported_game"),
+                (compatibility with { GameSha256 = compatibility.GameSha256.ToLowerInvariant() }, "unsupported_game"),
+                (compatibility with { GameSha256 = null! }, "unsupported_game"),
+                (compatibility with { Storefront = "Steam" }, "unsupported_game"),
+                (compatibility with { Storefront = null! }, "unsupported_game"),
+                (compatibility with { Operation = "arbitrary-native-call" }, "unsupported_operation"),
+                (compatibility with { Operation = null! }, "unsupported_operation")
+            };
+            foreach (var (value, error) in rejected)
+                await ExpectError(server, "POST", "/sessions", baseline with { Adapter = value }, null, 409, error, baseline.RequestId);
+            await ExpectError(server, "POST", "/sessions", baseline with { Key = NewSecret() }, null,
+                401, "invalid_credentials", baseline.RequestId);
+            Require((await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
+                "Rejected admissions changed existing state.");
+        });
+
+        await Check("adapter compatibility object rejects missing, duplicate, unknown, and wrongly typed fields", async () =>
+        {
+            var json = JsonSerializer.Serialize(Session(server, 0) with { Adapter = compatibility }, Wire.Json);
+            var nested = JsonSerializer.Serialize(compatibility, Wire.Json);
+            string[] malformed =
+            [
+                "{}", "[]", nested[..^1] + $",\"operation\":\"{compatibility.Operation}\"}}",
+                nested[..^1] + ",\"actor\":\"bob\"}",
+                nested.Replace($"\"adapterVersion\":\"{compatibility.AdapterVersion}\"", "\"adapterVersion\":2", StringComparison.Ordinal)
+            ];
+            foreach (var value in malformed)
+                await ExpectRawError(server, "POST", "/sessions", json.Replace(nested, value, StringComparison.Ordinal),
+                    null, 400, "invalid_json", null);
+        });
+
+        CommandRequest original = null!;
+        Reply originalReply = null!;
+        await Check("probe preserves contract status and emits one server-configured correlated event", async () =>
+        {
+            original = Command(server, state, "probe");
+            originalReply = await Post(server, "/commands", original, adapter.AccessToken);
+            Require(originalReply.Status == 200, "Adapter probe failed.");
+            var response = originalReply.As<CommandResponse>();
+            Require(response.ProtocolVersion == Wire.Version && response.RequestId == original.RequestId &&
+                response.CommunityId == server.Config.CommunityId, "Probe response lost envelope correlation.");
+            Require(response.State == state with { Revision = 1, Message = server.Config.CompletionMessage },
+                "Probe changed status, identity, or returned the wrong configured message/revision.");
+            Require(response.Event.EventId != Guid.Empty && response.Event.RequestId == original.RequestId &&
+                response.Event.EventType == "interaction.probed" && response.Event.State == response.State,
+                "Probe event differs from the acknowledged state.");
+            var events = await Get<EventsResponse>(server, "/events?after=0", adapter.AccessToken);
+            Require(events.Revision == 1 && events.Events.SequenceEqual([response.Event]), "Probe polling did not return the same single event.");
+            Require((await Get<StateResponse>(server, "/state", bob.AccessToken)).State.Revision == 0,
+                "Adapter mutated another principal.");
+            state = response.State;
+        });
+
+        await Check("session scope is enforced before replaying either adapter or diagnostic commands", async () =>
+        {
+            await ExpectError(server, "POST", "/commands", original, diagnostic.AccessToken, 403, "adapter_required", original.RequestId);
+            foreach (var type in new[] { "accept", "complete", "reset" })
+            {
+                var forbidden = Command(server, state, type);
+                await ExpectError(server, "POST", "/commands", forbidden, adapter.AccessToken, 403, "session_scope", forbidden.RequestId);
+            }
+            var accept = Command(server, state, "accept");
+            var accepted = await SuccessfulPost<CommandResponse>(server, "/commands", accept, diagnostic.AccessToken);
+            Require(accepted.State.Status == "accepted" && accepted.State.Message == "" &&
+                accepted.State.Revision == state.Revision + 1, "Diagnostic accept changed its existing behavior.");
+            state = accepted.State;
+            await ExpectError(server, "POST", "/commands", accept, adapter.AccessToken, 403, "session_scope", accept.RequestId);
+            Require((await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
+                "Rejected cross-scope replay mutated state.");
+        });
+
+        await Check("probe works in accepted and completed states without changing diagnostic transitions", async () =>
+        {
+            foreach (var expectedStatus in new[] { "accepted", "completed" })
+            {
+                var probed = await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, state, "probe"), adapter.AccessToken);
+                Require(probed.State == state with { Revision = state.Revision + 1, Message = server.Config.CompletionMessage } &&
+                    probed.State.Status == expectedStatus && probed.Event.EventType == "interaction.probed",
+                    "Probe did not preserve the current diagnostic status.");
+                var transition = expectedStatus == "accepted" ? "complete" : "reset";
+                var changed = await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, probed.State, transition), diagnostic.AccessToken);
+                Require(changed.Event.EventType == "interaction.changed" && changed.State.Revision == probed.State.Revision + 1,
+                    "Diagnostic transition event changed.");
+                state = changed.State;
+            }
+            Require(state.Status == "available" && state.Message == "", "Diagnostic reset did not clear the probe/completion message.");
+        });
+
+        await Check("probe replay, conflict, revision, and principal boundaries remain enforced", async () =>
+        {
+            var replay = await Post(server, "/commands", original, adapter.AccessToken);
+            Require(replay.Status == 200 && replay.Body == originalReply.Body, "Probe replay changed an earlier response after subsequent commands.");
+            await ExpectError(server, "POST", "/commands", original with { ExpectedRevision = state.Revision }, adapter.AccessToken,
+                409, "request_id_conflict", original.RequestId);
+            await ExpectError(server, "POST", "/commands", original with { Payload = new(Guid.NewGuid()) }, adapter.AccessToken,
+                409, "request_id_conflict", original.RequestId);
+            var stale = original with { RequestId = Guid.NewGuid() };
+            await ExpectError(server, "POST", "/commands", stale, adapter.AccessToken, 409, "stale_revision", stale.RequestId);
+            var invalid = Command(server, state, "probe");
+            await ExpectError(server, "POST", "/commands", invalid with { ExpectedRevision = -1 }, adapter.AccessToken,
+                400, "invalid_command", invalid.RequestId);
+            await ExpectError(server, "POST", "/commands", invalid with { Payload = new(Guid.NewGuid()) }, adapter.AccessToken,
+                404, "unknown_interaction", invalid.RequestId);
+            await ExpectError(server, "POST", "/commands", invalid, bob.AccessToken, 404, "unknown_interaction", invalid.RequestId);
+            Require((await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
+                "Rejected or replayed probes mutated current state.");
+        });
+
+        await Check("concurrent probes at one revision commit exactly one response", async () =>
+        {
+            var attempts = Enumerable.Range(0, 8).Select(_ => Command(server, state, "probe")).ToArray();
+            var replies = await Task.WhenAll(attempts.Select(command => Post(server, "/commands", command, adapter.AccessToken)));
+            Require(replies.Count(reply => reply.Status == 200) == 1, "Concurrent probes produced multiple mutations.");
+            foreach (var reply in replies.Where(reply => reply.Status != 200))
+                Require(reply.Status == 409 && reply.As<ApiError>().Error == "stale_revision", "Concurrent probe loser did not receive stale_revision.");
+            var events = await Get<EventsResponse>(server, $"/events?after={state.Revision}", adapter.AccessToken);
+            Require(events.Events.Length == 1 && events.Revision == state.Revision + 1, "Concurrent probes produced the wrong event count.");
+            state = events.Events[0].State;
+        });
+
+        await Check("adapter reconnect recovers current principal state and original replay while revoking only the old session", async () =>
+        {
+            Require((await Send(server, "DELETE", "/session", null, adapter.AccessToken)).Status == 204, "Adapter disconnect failed.");
+            await ExpectError(server, "POST", "/commands", original, adapter.AccessToken, 401, "invalid_session", original.RequestId);
+            adapter = await Connect(server, 0, compatibility);
+            Require((await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state, "Adapter reconnect lost current principal state.");
+            var replay = await Post(server, "/commands", original, adapter.AccessToken);
+            Require(replay.Status == 200 && replay.Body == originalReply.Body, "Adapter reconnect lost probe deduplication.");
+            Require((await Get<StateResponse>(server, "/state", diagnostic.AccessToken)).State == state, "Adapter disconnect revoked the diagnostic session.");
+            var bobState = (await Get<StateResponse>(server, "/state", bob.AccessToken)).State;
+            var ownRequest = Command(server, bobState, "probe") with { RequestId = original.RequestId };
+            var ownReply = await SuccessfulPost<CommandResponse>(server, "/commands", ownRequest, bob.AccessToken);
+            Require(ownReply.State.InteractionId == bobState.InteractionId && ownReply.State.Revision == 1 &&
+                ownReply.Event.EventId != originalReply.As<CommandResponse>().Event.EventId,
+                "Request deduplication leaked between principals.");
+        });
+
+        await Check("probe shares the 256-command bound and retains successful replay at capacity", async () =>
+        {
+            while (state.Revision < 256)
+                state = (await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, state, "probe"), adapter.AccessToken)).State;
+            var overflow = Command(server, state, "probe");
+            await ExpectError(server, "POST", "/commands", overflow, adapter.AccessToken, 429, "interaction_capacity", overflow.RequestId);
+            var replay = await Post(server, "/commands", original, adapter.AccessToken);
+            Require(replay.Status == 200 && replay.Body == originalReply.Body, "Capacity evicted the first successful probe.");
+            var events = await Get<EventsResponse>(server, "/events?after=0", adapter.AccessToken);
+            Require(events.Revision == 256 && events.Events.Length == 256 &&
+                (await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
+                "Capacity rejection changed state or event retention.");
+        });
+
+        await Check("adapter server restart invalidates sessions and interaction IDs and returns changed configuration", async () =>
+        {
+            await server.Stop();
+            var restarted = CreateServer("adapter-restart", server.Config with { CompletionMessage = "Changed adapter response after service restart." });
+            await restarted.Start();
+            await ExpectError(restarted, "GET", "/state", null, adapter.AccessToken, 401, "invalid_session", null);
+            var session = await Connect(restarted, 0, compatibility);
+            var fresh = (await Get<StateResponse>(restarted, "/state", session.AccessToken)).State;
+            Require(fresh.Revision == 0 && fresh.Message == "" && fresh.InteractionId != state.InteractionId, "Restart retained adapter memory.");
+            await ExpectError(restarted, "POST", "/commands", original, session.AccessToken, 404, "unknown_interaction", original.RequestId);
+            var response = await SuccessfulPost<CommandResponse>(restarted, "/commands", Command(restarted, fresh, "probe"), session.AccessToken);
+            Require(response.State.Revision == 1 && response.State.Status == "available" &&
+                response.State.Message == restarted.Config.CompletionMessage && response.State.Message != state.Message,
+                "Adapter probe ignored changed server configuration.");
+            await restarted.Stop();
+        });
+    }
+
     private async Task ExerciseExpiry()
     {
         await Check("short-lived session expires and is removed", async () =>
@@ -430,9 +633,9 @@ internal sealed class IntegrationSuite : IAsyncDisposable
     private static SessionRequest Session(TestServer server, int principal) => new(Wire.Version, server.Config.CommunityId,
         Guid.NewGuid(), server.Config.Principals[principal].Id, server.Config.Principals[principal].Key);
 
-    private async Task<SessionResponse> Connect(TestServer server, int principal)
+    private async Task<SessionResponse> Connect(TestServer server, int principal, AdapterCompatibility? adapter = null)
     {
-        var request = Session(server, principal);
+        var request = Session(server, principal) with { Adapter = adapter };
         var response = await SuccessfulPost<SessionResponse>(server, "/sessions", request);
         Require(response.ProtocolVersion == Wire.Version && response.CommunityId == server.Config.CommunityId && response.RequestId == request.RequestId && response.SessionId != Guid.Empty, "Session envelope is invalid.");
         Require(response.AccessToken.Length >= 32 && response.ExpiresAt > DateTimeOffset.UtcNow, "Session token/expiry is invalid.");

@@ -18,6 +18,7 @@ from pymhf.core._types import FUNCDEF
 from pymhf.core.hooking import manual_hook
 
 from interaction import Interaction
+from preflight import COMPATIBILITY
 from runtime_guard import check_process
 
 
@@ -26,7 +27,8 @@ _report, _rvas = check_process(os.getpid())
 _run_dir = Path(_internal.CONFIG["community_lab"]["run_dir"])
 _log_path = _run_dir / "events.jsonl"
 _output = _log_path.open("x", encoding="utf-8", buffering=1)
-_events = queue.Queue(maxsize=128)
+_events = queue.SimpleQueue()
+_event_gate = threading.Lock()
 _dropped = 0
 
 
@@ -34,10 +36,16 @@ def emit(event, **fields):
     global _dropped
     item = {"event": event, "time_ns": time.time_ns(),
             "thread": threading.get_native_id(), **fields}
-    try:
-        _events.put_nowait(item)
-    except queue.Full:
+    if not _event_gate.acquire(blocking=False):
         _dropped += 1
+        return
+    try:
+        if _events.qsize() >= 128:
+            _dropped += 1
+        else:
+            _events.put(item)
+    finally:
+        _event_gate.release()
 
 
 def write_events():
@@ -53,11 +61,17 @@ emit("probe_loaded", sha256=_report["sha256"])
 
 class CommunityProbe(Mod):
     __author__ = "nms-community-platform contributors"
-    __version__ = "0.1.0"
-    __description__ = "Local native chat probe; no service connection"
+    __version__ = COMPATIBILITY["adapterVersion"]
+    __description__ = "Local native chat probe with optional bounded service worker"
 
     def __init__(self):
-        self.interaction = Interaction(emit)
+        service_config = _internal.CONFIG["community_lab"].get("service_config")
+        bridge = None
+        if service_config:
+            from service_client import ClientConfig
+            from bridge import Bridge
+            bridge = Bridge(ClientConfig.load(service_config), emit)
+        self.interaction = Interaction(emit, bridge)
         super().__init__()
 
     @manual_hook("Community.ParseText", offset=_rvas["parse_text"],

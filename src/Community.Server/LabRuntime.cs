@@ -12,7 +12,7 @@ internal sealed class ApiFault(int status, string code) : Exception(code)
 
 internal sealed class LabRuntime(ServerConfig config)
 {
-    private sealed record Session(Guid Id, string PrincipalId, DateTimeOffset ExpiresAt);
+    private sealed record Session(Guid Id, string PrincipalId, DateTimeOffset ExpiresAt, bool Adapter);
     private sealed class Contract
     {
         public InteractionState State { get; set; } = new(Guid.NewGuid(), 0, "available", "");
@@ -39,13 +39,22 @@ internal sealed class LabRuntime(ServerConfig config)
         Envelope(request.ProtocolVersion, request.CommunityId, request.RequestId);
         var principal = config.Principals.FirstOrDefault(p => p.Id == request.PrincipalId);
         if (principal is null || !SecretEquals(request.Key, principal.Key)) throw new ApiFault(401, "invalid_credentials");
+        if (request.Adapter is { } adapter)
+        {
+            // Compatibility self-report only; a caller holding a lab key can fabricate these fields.
+            var supported = AdapterCompatibility.Supported;
+            if (adapter.AdapterVersion != supported.AdapterVersion) throw new ApiFault(409, "unsupported_adapter");
+            if (adapter.GameSha256 != supported.GameSha256 || adapter.Storefront != supported.Storefront)
+                throw new ApiFault(409, "unsupported_game");
+            if (adapter.Operation != supported.Operation) throw new ApiFault(409, "unsupported_operation");
+        }
         lock (gate)
         {
             var now = DateTimeOffset.UtcNow;
             foreach (var key in sessions.Where(pair => pair.Value.ExpiresAt <= now).Select(pair => pair.Key).ToArray()) sessions.Remove(key);
             if (sessions.Count >= 64) throw new ApiFault(429, "session_capacity");
             var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-            var session = new Session(Guid.NewGuid(), principal.Id, now.AddSeconds(config.SessionLifetimeSeconds));
+            var session = new Session(Guid.NewGuid(), principal.Id, now.AddSeconds(config.SessionLifetimeSeconds), request.Adapter is not null);
             sessions.Add(token, session);
             return new(Wire.Version, request.RequestId, config.CommunityId, session.Id, token, session.ExpiresAt);
         }
@@ -86,11 +95,15 @@ internal sealed class LabRuntime(ServerConfig config)
     {
         lock (gate)
         {
-            var principal = Authenticate(token).PrincipalId;
+            var session = Authenticate(token);
             Envelope(request.ProtocolVersion, request.CommunityId, request.RequestId);
             if (request.Payload is null || request.Payload.InteractionId == Guid.Empty || request.ExpectedRevision < 0 ||
-                request.CommandType is not ("accept" or "complete" or "reset")) throw new ApiFault(400, "invalid_command");
-            var contract = contracts[principal];
+                request.CommandType is not ("accept" or "complete" or "reset" or "probe")) throw new ApiFault(400, "invalid_command");
+            var probe = request.CommandType == "probe";
+            // Scope precedes replay lookup, so a differently scoped session cannot replay a privileged command.
+            if (session.Adapter && !probe) throw new ApiFault(403, "session_scope");
+            if (!session.Adapter && probe) throw new ApiFault(403, "adapter_required");
+            var contract = contracts[session.PrincipalId];
             if (contract.Requests.TryGetValue(request.RequestId, out var prior))
             {
                 if (prior.Request != request) throw new ApiFault(409, "request_id_conflict");
@@ -100,6 +113,7 @@ internal sealed class LabRuntime(ServerConfig config)
             if (request.ExpectedRevision != contract.State.Revision) throw new ApiFault(409, "stale_revision");
             var next = (contract.State.Status, request.CommandType) switch
             {
+                (_, "probe") => contract.State.Status,
                 ("available", "accept") => "accepted",
                 ("accepted", "complete") => "completed",
                 ("completed", "reset") => "available",
@@ -108,8 +122,8 @@ internal sealed class LabRuntime(ServerConfig config)
             // Never evict deduplication entries and accidentally execute an old request twice.
             if (contract.Requests.Count >= 256) throw new ApiFault(429, "interaction_capacity");
             contract.State = new(contract.State.InteractionId, contract.State.Revision + 1, next,
-                next == "completed" ? config.CompletionMessage : "");
-            var change = new StateEvent(Guid.NewGuid(), request.RequestId, "interaction.changed", contract.State);
+                probe || next == "completed" ? config.CompletionMessage : "");
+            var change = new StateEvent(Guid.NewGuid(), request.RequestId, probe ? "interaction.probed" : "interaction.changed", contract.State);
             var response = new CommandResponse(Wire.Version, request.RequestId, config.CommunityId, contract.State, change);
             contract.Requests.Add(request.RequestId, (request, response));
             contract.Events.Add(change);

@@ -1,6 +1,6 @@
 # Proposed architecture
 
-This document describes a **design to test**, not a validated NMS server SDK. External capability evidence belongs to [RESEARCH](RESEARCH.md); test procedures belong to [EXPERIMENTS](EXPERIMENTS.md); delivery state belongs to [STEPS](STEPS.md).
+This document describes the broader **design to test**, not a validated NMS server SDK. The implemented narrow chat/service boundary is documented in [T-04.3](tasks/T-04.3/README.md). External capability evidence belongs to [RESEARCH](RESEARCH.md); test procedures belong to [EXPERIMENTS](EXPERIMENTS.md); delivery state belongs to [STEPS](STEPS.md).
 
 ## Construction sequence and hosting options
 
@@ -28,7 +28,7 @@ flowchart TB
     L --> D[Directory, identity, compatibility registry]
     L --> R[Signed resource distribution]
     L --> G[Owned NMS installation]
-    G <--> A[NMS adapter: unproven on target build]
+    G <--> A[NMS adapter: narrow chat bridge implemented]
     A <--> C[Operator community runtime]
     C --> DB[Community database and transaction ledger]
     C --> S[Constrained resource workers]

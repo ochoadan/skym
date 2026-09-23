@@ -130,6 +130,8 @@ Repeat the narrow proof after a future update or on another legitimately availab
 
 **Question:** Can the operator start a server and make it control one visible response inside their running NMS game?
 
+The selected explicit chat-polling implementation, detailed procedure and observed initial-loop results are in [T-04.3](tasks/T-04.3/README.md).
+
 Start the standalone service on the player's PC with a small operator-configured rule. Use one owned game installation and the minimal E-03 interaction adapter. Trigger the game action, send it to the service, have the service select the result, and display/apply that result inside the game. Change the rule on the service and repeat so the outcome demonstrates the server's decision.
 
 Use request IDs in the game and server logs to correlate the round trip. Complete five interactions, disconnect/reconnect the service, reject a malformed request, and confirm a stopped service produces an understandable failure instead of a fabricated success. A server-decided in-game interaction message is sufficient for this first loop; controlling native combat or world physics is later work. A separate web page or synthetic client alone verifies the service, not this game connection.

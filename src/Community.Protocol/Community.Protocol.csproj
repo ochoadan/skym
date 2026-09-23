@@ -1,1 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <EmbeddedResource Include="../../config/adapter-compatibility.json" LogicalName="Community.Protocol.AdapterCompatibility" />
+  </ItemGroup>
+</Project>

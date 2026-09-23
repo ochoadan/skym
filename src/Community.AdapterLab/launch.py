@@ -14,6 +14,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pid", type=int, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
+    parser.add_argument("--service-config", type=Path)
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 13) or sys.prefix == sys.base_prefix:
         raise ValueError("Use the isolated CPython 3.13 lab venv")
@@ -31,11 +32,22 @@ def main():
             raise ValueError("pyMHF port 6770 is already occupied")
     report, _ = check_process(args.pid)
     run_dir = args.run_dir.resolve()
-    allowed = Path(__file__).resolve().parents[2] / "local" / "t04-2"
+    allowed = Path(__file__).resolve().parents[2] / "local" / ("t04-3" if args.service_config else "t04-2")
     if not run_dir.is_relative_to(allowed) or run_dir == allowed:
-        raise ValueError("Use a new run directory below local/t04-2")
+        raise ValueError("Use a new run directory below the selected local task directory")
+    service_config = None
+    if args.service_config:
+        from service_client import ClientConfig
+        service_config = args.service_config.resolve()
+        if not service_config.is_relative_to(allowed):
+            raise ValueError("Use a private service config below local/t04-3")
+        ClientConfig.load(service_config)
     run_dir.mkdir(parents=True, exist_ok=False)
     (run_dir / "preflight.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    import hashlib
+    source_hashes = {source.name: hashlib.sha256(source.read_bytes()).hexdigest()
+                     for source in Path(__file__).parent.glob("*.py")}
+    (run_dir / "source-hashes.json").write_text(json.dumps(source_hashes, indent=2), encoding="utf-8")
     print("Preflight passed for candidate experiment; attaching to PID", args.pid, flush=True)
     # Explicit PID, no automatic launch/update, no GUI/HTTP extras/internal mods.
     # pyMHF constructs unused interactive prompts at import time. Supply a public
@@ -53,6 +65,8 @@ def main():
               "default_mod_save_dir": str(run_dir / "mod-saves"),
               "logging": {"log_dir": str(run_dir), "log_level": "info", "shown": False},
               "gui": {"shown": False}, "community_lab": {"run_dir": str(run_dir)}}
+    if service_config:
+        config["community_lab"]["service_config"] = str(service_config)
     injector.run_module(str(Path(__file__).with_name("probe.py")), config, config_dir=str(run_dir))
 
 

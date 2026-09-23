@@ -40,7 +40,22 @@ public static class Wire
     }
 }
 
-public sealed record SessionRequest(int ProtocolVersion, string CommunityId, Guid RequestId, string PrincipalId, string Key);
+public sealed record SessionRequest(int ProtocolVersion, string CommunityId, Guid RequestId, string PrincipalId, string Key,
+    AdapterCompatibility? Adapter = null);
+public sealed record AdapterCompatibility(string AdapterVersion, string GameSha256, string Storefront, string Operation)
+{
+    // The single verified adapter/build pairing; the Python adapter reads the same config/adapter-compatibility.json.
+    public static AdapterCompatibility Supported { get; } = LoadSupported();
+
+    private static AdapterCompatibility LoadSupported()
+    {
+        using var resource = typeof(AdapterCompatibility).Assembly.GetManifestResourceStream("Community.Protocol.AdapterCompatibility")
+            ?? throw new InvalidOperationException("Missing adapter compatibility.");
+        using var buffer = new MemoryStream();
+        resource.CopyTo(buffer);
+        return Wire.Parse<AdapterCompatibility>(buffer.ToArray());
+    }
+}
 public sealed record SessionResponse(int ProtocolVersion, Guid RequestId, string CommunityId, Guid SessionId, string AccessToken, DateTimeOffset ExpiresAt);
 public sealed record CommandRequest(int ProtocolVersion, string CommunityId, Guid RequestId, long ExpectedRevision, string CommandType, CommandPayload Payload);
 public sealed record CommandPayload(Guid InteractionId);
