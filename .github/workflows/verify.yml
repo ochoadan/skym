@@ -1,4 +1,4 @@
-name: Verify standalone server
+name: Verify service and adapter logic
 on:
   push:
   pull_request:
@@ -18,3 +18,10 @@ jobs:
       - name: Build and test real local processes
         shell: pwsh
         run: dotnet run --project tests/Community.Tests --configuration Release
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Verify adapter guards and interaction logic without game files
+        shell: pwsh
+        run: python -m unittest discover -s tests/Community.AdapterLab.Tests -v

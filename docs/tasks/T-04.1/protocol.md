@@ -1,6 +1,6 @@
 # T-04.1 protocol version 1
 
-Implemented contract for the loopback lab. [Wire.cs](../../../src/Community.Protocol/Wire.cs) defines field types; [task runbook](README.md) covers commands/configuration. All examples/fixtures are original project data. There is no game-adapter operation in this protocol yet.
+Implemented contract for the loopback lab. [Wire.cs](../../../src/Community.Protocol/Wire.cs) defines field types; [task runbook](README.md) covers commands/configuration. All examples/fixtures are original project data. There is no game-adapter operation in this protocol yet. Treat version 1 as provisional: T-04.3 may revise the transport or add server-initiated delivery once the adapter's delayed-reply path is known. Its authority rules (session-derived actor, request-ID replay, expected revisions) are intended to carry forward.
 
 ## Transport and bounds
 

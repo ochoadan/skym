@@ -4,11 +4,11 @@ Updated: 2026-09-23.
 
 ## Current status
 
-The research foundation, T-03.1 native baseline and T-04.1 / M-01 standalone service are complete. T-04.2, the game adapter, is next. Evidence and entry points are linked below.
+The research foundation, T-03.1 native baseline, T-04.1 / M-01 standalone service and T-04.2's narrow native chat adapter are complete. T-04.3 is next: connect that game interaction to the service through a lifecycle-safe asynchronous response path. Evidence and entry points are linked below.
 
 [PRODUCT](PRODUCT.md) defines the goal; [ROADMAP](ROADMAP.md) defines the longer-range plan. This file owns delivery status and the short queue. Detailed records are in the [task index](tasks/README.md).
 
-The handoff is committed locally and not pushed. A GitHub remote and build/test workflow are configured; hosted CI has not run.
+T-04.1 is pushed; T-04.2 is committed locally and not pushed. Hosted CI passed for the T-04.1 commit (run 35922543716); the workflow's adapter-test step has not yet run on GitHub.
 
 ## Milestone status
 
@@ -32,29 +32,30 @@ Acceptance definitions live in ROADMAP; this table records status only.
 | T-01 | Research-backed project foundation | Completed; evidence below. ROADMAP expansion makes the proposed construction work visible |
 | T-02 | Operator discovery and scoped permissions/release work | Prepared questions only; runs alongside engineering. Interviews and monetization approval are not prerequisites for an original local service |
 | T-03 | Local game, content, and later multiplayer baselines | T-03.1 / R-011 / E-01a complete; parent incomplete |
-| T-04 | Implement server, game integration, persistence, synchronization, and operator control | T-04.1 / R-001–R-010 / M-01 complete; parent incomplete. Adapter route and achievable control remain unverified |
+| T-04 | Implement server, game integration, persistence, synchronization, and operator control | T-04.1 / R-001–R-010 / M-01 and narrow T-04.2 complete; parent incomplete. Explicit lifecycle API, typed external boundary and broader adapter hardening remain open |
 | T-05 | Reusable creator/operator platform, pilot, and release | Not started; follows the capabilities it actually uses. Detailed future decomposition is in ROADMAP |
 
 These parent IDs supersede the original coarse queue without renumbering its references. Completing a child completes that child only. The remaining core work is visible in ROADMAP and is not hidden in the optional backlog.
 
 ## Current detailed tasks
 
-Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 covers R-021–R-030; T-04.4 covers R-031–R-040. These are the current proposed increments. The service has a concrete local verification path; the game-dependent tasks still need a supported operation and adapter route. Their build details may change with those findings.
+Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 covers R-021–R-030; T-04.4 covers R-031–R-040. The local chat operation now has game evidence. This does not complete every adapter roadmap item: R-015's explicit lifecycle interface, R-019's typed external boundary and the full R-020/E-03 hardening remain open. T-04.3 must establish the asynchronous presentation/lifetime mechanism it needs before sending service replies to the game.
 
 - [x] **T-03.1 — Owned installation and repeatable native baseline.**
   R-011 / E-01a. [Plan and procedure](tasks/T-03.1/README.md) · [Evidence](tasks/T-03.1/evidence-2026-09-21.md#result-and-limits).
 
 - [x] **T-04.1 — Start and operate the first standalone community server.**
-  R-001–R-010 / M-01 complete within the in-memory synthetic-client scope. [Implementation and commands](tasks/T-04.1/README.md) · [Evidence and limits](tasks/T-04.1/evidence-2026-09-23.md#result-and-limits). Next: T-04.2.
+  R-001–R-010 / M-01 complete within the in-memory synthetic-client scope. [Implementation and commands](tasks/T-04.1/README.md) · [Evidence and limits](tasks/T-04.1/evidence-2026-09-23.md#result-and-limits).
 
-- [ ] **T-04.2 — Expose one game interaction through a minimal adapter.**
+- [x] **T-04.2 — Expose one game interaction through a minimal adapter.**
   Needs: T-03.1, the selected adapter/tool's actual capabilities and license, and an appropriate scope for the chosen game operation. The standalone server can be developed in parallel.
   Build: Observe one interaction and present/apply one reversible response inside the running game. Isolate build detection, lifecycle, and thread handling. Use the required subset of E-02/E-03; diagnose and replace an unsupported hook path if necessary.
   Verify: Trigger the real interaction, observe the callback and in-game response, unload/restart safely, and refuse unsupported signatures. Record the supported operation and its limitations without requiring complete game authority.
-  Completed: Not started.
+  Completed within the synchronous native-chat scope: real callback/response, repetitions, menu/reload, disable, restart-based removal and final recovery verified; 28 game-free tests passed. One earlier injector-startup fault is retained in evidence. Broader R-012–R-020 work is partial, as scoped above. [Operation and procedure](tasks/T-04.2/README.md) · [Sources](tasks/T-04.2/sources.md) · [Evidence and remaining work](tasks/T-04.2/evidence-2026-09-23.md#result-and-limits).
 
 - [ ] **T-04.3 — Connect one real player to their own server.**
   Needs: T-04.1 and T-04.2.
+  Next action: Establish a bounded typed request/reply path and validate how a delayed reply reaches the game without retaining expired native pointers or waiting on the game thread. Carry forward the applicable R-015/R-019 work; the current synchronous chat replacement alone is insufficient.
   Build: Send the real game interaction through the adapter to the local server, let server configuration determine the result, and display/apply the response in the same game client. Add scoped local session credentials and useful connection errors.
   Verify: E-10 initial loop: five actual in-game round trips, a changed server rule producing a changed result, stopped-service handling, and reconnect. One real player is sufficient to complete M-02. No second player or full economy is required.
   Completed: Not started.
@@ -71,7 +72,7 @@ Server software, protocol fixtures, data models, and tests with original data ca
 
 Keep relevant code/content licenses and any concrete restrictions attached to the operation they affect. Publisher clarification, public entitlement access, interviews, naming, privacy responsibilities, distribution, hosting, and commercialization are distinct workstreams. Resolve required release conditions before the affected release. Do not require a commercial-launch agreement merely to write an original local server or document native game behavior. Outreach still needs a user instruction to contact people.
 
-Game integration has not yet been attempted. The main open technical questions are which interaction can be exposed safely, what state the external runtime can control, and how that control relates to native sessions. These findings may change the task breakdown, dependencies, or proposed architecture.
+The local chat probe establishes a narrow in-game input/presentation path. Asynchronous server-driven presentation, explicit lifecycle signals and the relationship to native sessions remain unverified. These findings may change the task breakdown, dependencies, or proposed architecture.
 
 ## Completion evidence
 
@@ -86,3 +87,4 @@ Game integration has not yet been attempted. The main open technical questions a
 | 2026-09-21 | Intent and planning revision | Removed duplicated failure-response and fixed-order instructions; preserved product, trust, and evidence requirements. Independent review found no actionable inconsistencies. Checked 11 Markdown files, 42 relative links, balanced fences, 140 unchanged roadmap task rows across 14 stages, five queue tasks, ten experiment IDs, and Git whitespace. Documentation only; no application tests or new external-source verification |
 | 2026-09-21 | T-03.1 / R-011 | Native repeatability and recovery verified; [results, limits, and document checks](tasks/T-03.1/evidence-2026-09-21.md#result-and-limits). Detailed documentation moved under the task |
 | 2026-09-23 | T-04.1 / R-001–R-010 / M-01 | Standalone service and diagnostic client verified; [results, checks and limits](tasks/T-04.1/evidence-2026-09-23.md). No hosted CI or game integration run |
+| 2026-09-23 | T-04.2 / scoped R-012–R-020 | Native chat adapter proof, repeated responses, menu/reload, disable, process recovery and settings restoration verified; [results, one startup failure, checks and remaining work](tasks/T-04.2/evidence-2026-09-23.md#result-and-limits). No service round trip or full E-03 completion |

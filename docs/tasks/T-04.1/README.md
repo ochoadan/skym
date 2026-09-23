@@ -62,7 +62,7 @@ With the server stopped, edit **only `completionMessage`** in `local/lab/server.
 
 Configuration controls the community ID, numeric loopback bind (`127.0.0.1` only), port (1024–65535), message (1–512 characters), session lifetime (1–3600 seconds), operator key and 1–8 lab principals. IDs use lowercase letters/digits/hyphens, maximum 48 characters. Keys must be distinct printable strings of 32–128 characters; initialization generates 256-bit random values. `dataDirectory` is a child path relative to the configuration; it is created as a reserved location and contains no durable state in this increment. Keep the configuration under ignored local storage.
 
-Startup returns exit 2 for invalid config or an unavailable port without printing secrets; verify the config against the example, ensure keys were initialized, check port conflicts, and confirm the pinned SDK/runtime. The client returns exit 1 for connection/protocol failures. Run `health` to check availability. A stopped service produces a diagnostic failure; it does not fabricate a successful interaction.
+Startup returns exit 2 for invalid config or an unavailable port without printing secrets; verify the config against the example, ensure keys were initialized, check port conflicts, and confirm `dotnet --version` reports a .NET 10 SDK. The client returns exit 1 for connection/protocol failures. Run `health` to check availability. A stopped service produces a diagnostic failure; it does not fabricate a successful interaction.
 
 ## Implementation and boundaries
 

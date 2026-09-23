@@ -62,7 +62,7 @@ No public, supported launcher-to-private-NMS-server join API was identified. Fir
 
 ## 4. Tooling: what can be reused and what is missing
 
-The following are maintainer-documented capabilities. No listed tool was installed or tested. Dates indicate activity, not current-build compatibility. Licenses must be checked at the exact commit before incorporation; bundled dependencies and generated game-derived content need separate review.
+The following are maintainer-documented capabilities from the initial desk review. The later [T-04.2 source review](tasks/T-04.2/sources.md) and [lab evidence](tasks/T-04.2/evidence-2026-09-23.md) cover the selected pyMHF/NMS.py-derived probe. Dates indicate activity, not current-build compatibility. Licenses must be checked at the exact commit before incorporation; bundled dependencies and generated game-derived content need separate review.
 
 | Tool | Documented role and limit | Activity and license evidence |
 | --- | --- | --- |

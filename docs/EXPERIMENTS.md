@@ -58,6 +58,8 @@ Select one harmless, licensed data modification. Confirm the current installatio
 
 **Question:** Can the selected adapter observe and perform the minimum needed game operation reliably?
 
+The narrow first chat-probe procedure and its code entry points are in [T-04.2](tasks/T-04.2/README.md). The broader lifecycle, travel and duration checks below remain separate acceptance work.
+
 Expose game lifecycle, current location/transform, one interaction event, and one reversible presentation/state operation. Demonstrate it across ten process restarts, a menu transition, travel, and clean unload. Test a deliberately unsupported build fingerprint and a missing/ambiguous signature. Record the allowed execution thread and valid object lifetime.
 
 **Acceptance:** Each operation is observed correctly on repeat runs and lifecycle transitions; no use of invalid object references; unsupported conditions disable integration safely. Run a two-hour session and record adapter-related failures and frame-time overhead against E-01a conditions. A successful hook is a completed adapter capability; authority and synchronization are additional tests. E-10 can begin once its required operation works, while longer lifecycle hardening continues.

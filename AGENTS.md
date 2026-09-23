@@ -41,6 +41,8 @@ Update each fact's owner and link to it elsewhere. Minimize changes to core Mark
 
 Standalone service setup, run and verification commands are in [T-04.1](docs/tasks/T-04.1/README.md#setup-build-and-verify). Do not invent passing application tests or game results.
 
+Adapter lab setup, read-only preflight and verification commands are in [T-04.2](docs/tasks/T-04.2/README.md#setup-build-and-verify); follow its disposable-save procedure before attachment.
+
 Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record detailed checks and limitations in the task/evidence record; link the result from STEPS.
 
 When code is introduced, put exact install, run, and verification commands in its component/task documentation and link that entry point here. Select tests for observable behavior and risks, not mechanical copies of the implementation.

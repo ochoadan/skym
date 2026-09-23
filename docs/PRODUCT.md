@@ -42,7 +42,7 @@ Operators should own a deployable server, its community rules, and persistent re
 
 ## Proposed first playable milestone: one player and their server
 
-The user can start their own server, connect one running NMS client, perform a small in-game action, and see a response determined by server configuration/state. Changing that configuration changes the result inside the game. This defines the intended outcome; the interaction and adapter route remain unselected.
+The user can start their own server, connect one running NMS client, perform a small in-game action, and see a response determined by server configuration/state. Changing that configuration changes the result inside the game. This defines the intended outcome; the selected exploratory interaction and adapter route are documented in [T-04.2](tasks/T-04.2/README.md).
 
 A one-player server is a legitimate engineering and personal-use outcome. A standalone server process with a test client is also useful earlier progress. Each is evaluated against its actual behavior. Neither needs to deliver every multiplayer, security, hosting, or simulation feature of the eventual platform to count as completed work.
 
