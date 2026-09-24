@@ -1,6 +1,6 @@
 {
-  "adapterVersion": "0.2.0",
+  "adapterVersion": "0.3.0",
   "gameSha256": "B7913F268DFC62386B6B68F524BFC8ADE4A44A9F4FBAD39085B7BF51BE3680CB",
   "storefront": "steam",
-  "operation": "native-chat-poll-v1"
+  "operation": "native-chat-poll-v2"
 }

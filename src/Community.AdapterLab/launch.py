@@ -32,15 +32,18 @@ def main():
             raise ValueError("pyMHF port 6770 is already occupied")
     report, _ = check_process(args.pid)
     run_dir = args.run_dir.resolve()
-    allowed = Path(__file__).resolve().parents[2] / "local" / ("t04-3" if args.service_config else "t04-2")
-    if not run_dir.is_relative_to(allowed) or run_dir == allowed:
+    local = Path(__file__).resolve().parents[2] / "local"
+    tasks = ("t04-3", "t04-4") if args.service_config else ("t04-2",)
+    allowed = next((local / task for task in tasks
+                    if run_dir.is_relative_to(local / task) and run_dir != local / task), None)
+    if allowed is None:
         raise ValueError("Use a new run directory below the selected local task directory")
     service_config = None
     if args.service_config:
         from service_client import ClientConfig
         service_config = args.service_config.resolve()
         if not service_config.is_relative_to(allowed):
-            raise ValueError("Use a private service config below local/t04-3")
+            raise ValueError("Use a private service config below the same local task directory as the run")
         ClientConfig.load(service_config)
     run_dir.mkdir(parents=True, exist_ok=False)
     (run_dir / "preflight.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

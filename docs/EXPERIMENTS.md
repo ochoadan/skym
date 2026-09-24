@@ -128,6 +128,8 @@ Repeat the narrow proof after a future update or on another legitimately availab
 
 ## E-10 — Connect one real player to their own server
 
+The persistence extension, read-only chat query and attended restart/replay procedure are in [T-04.4](tasks/T-04.4/README.md#attended-e-10-persistence-procedure).
+
 **Question:** Can the operator start a server and make it control one visible response inside their running NMS game?
 
 The selected explicit chat-polling implementation, detailed procedure and observed initial-loop results are in [T-04.3](tasks/T-04.3/README.md).

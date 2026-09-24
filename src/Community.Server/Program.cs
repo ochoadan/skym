@@ -4,11 +4,15 @@ using System.Threading.RateLimiting;
 using Community.Protocol;
 using Community.Server;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Data.Sqlite;
 
 var initialize = args is ["--init", "--config", _];
-if (!initialize && (args.Length != 2 || args[0] != "--config"))
+var migrate = args is ["--migrate", "--config", _];
+var backup = args is ["--backup", _, "--config", _];
+var restore = args is ["--restore", _, "--config", _];
+if (!initialize && !migrate && !backup && !restore && args is not ["--config", _])
 {
-    Console.Error.WriteLine("Usage: Community.Server [--init] --config <local server.json>");
+    Console.Error.WriteLine("Usage: Community.Server [--init | --migrate | --backup <new file> | --restore <backup>] --config <local server.json>");
     return 2;
 }
 
@@ -20,8 +24,23 @@ try
         Console.WriteLine("Created private lab configuration with random keys. Keep this file out of Git.");
         return 0;
     }
-    var config = Configuration.Load(args[1]);
-    var runtime = new LabRuntime(config);
+    var configurationPath = args[^1];
+    var config = Configuration.Load(configurationPath);
+    var databasePath = Configuration.DatabasePath(configurationPath, config);
+    if (backup || restore)
+    {
+        if (backup) PersistentStore.Backup(databasePath, args[1], config.CommunityId);
+        else PersistentStore.Restore(databasePath, args[1], config.CommunityId);
+        Console.WriteLine(backup ? "Verified offline backup created." : "Verified backup restored to a new database. Start the service to reconnect.");
+        return 0;
+    }
+    using var store = new PersistentStore(config, databasePath);
+    if (migrate)
+    {
+        Console.WriteLine($"Database schema {PersistentStore.SchemaVersion} is ready. Unsupported schemas are never downgraded or reset.");
+        return 0;
+    }
+    var runtime = new LabRuntime(config, store);
     var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { Args = [] });
     // No URLs, endpoints, or secrets can be injected through ambient web-host configuration.
     builder.Configuration.Sources.Clear();
@@ -81,6 +100,15 @@ try
             await context.Response.WriteAsJsonAsync(new ApiError(Wire.Version, RequestId(context), "invalid_http_body"), Wire.Json);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) { }
+        catch (Exception fault) when (fault is SqliteException or StorageFault)
+        {
+            // An error or lost response may follow a committed mutation; query/replay it after recovery.
+            // Do not serialize database paths, SQL, principal data, or raw exception messages.
+            var code = fault is StorageFault storage ? storage.Code : "storage_unavailable";
+            logger.LogError("storage_failure {TraceId} {RequestId} {Code}", context.TraceIdentifier, RequestId(context), code);
+            context.Response.StatusCode = 503;
+            await context.Response.WriteAsJsonAsync(new ApiError(Wire.Version, RequestId(context), "storage_unavailable"), Wire.Json);
+        }
         finally
         {
             // Never log bodies, query strings, headers, tokens, or arbitrary paths.
@@ -130,12 +158,12 @@ try
     await app.DisposeAsync();
     return 0;
 }
-catch (Exception exception) when (exception is IOException or InvalidDataException or JsonException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+catch (Exception exception) when (exception is IOException or InvalidDataException or JsonException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or SqliteException or StorageFault)
 {
     // Parser/startup exceptions may contain configuration values. Report only the category.
     Console.Error.WriteLine(initialize
         ? $"Initialization failed ({exception.GetType().Name}). Use a writable path to a new file; existing files are never overwritten."
-        : $"Startup failed ({exception.GetType().Name}). Check configuration, SDK, and port; see the T-04.1 runbook.");
+        : $"Startup or storage operation failed ({(exception is StorageFault storage ? storage.Code : exception.GetType().Name)}). Check configuration, port and database ownership/schema; see the T-04.4 runbook. Existing databases are never reset.");
     return 2;
 }
 

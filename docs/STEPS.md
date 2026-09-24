@@ -4,11 +4,11 @@ Updated: 2026-09-23.
 
 ## Current status
 
-The research foundation, T-03.1 native baseline, T-04.1 / M-01 standalone service, T-04.2's narrow native chat adapter and T-04.3 / M-02 one-player service loop are complete within their recorded scopes. T-04.4 is next: persist the player's community state across reconnect and server restart. Evidence and entry points are linked below.
+The research foundation, T-03.1 native baseline, T-04.1 / M-01 standalone service, T-04.2's narrow native adapter, T-04.3 / M-02 game/service loop and T-04.4 / M-03 persistent reconnect are complete within their recorded scopes. The player visibly recovered progress after closing the game and restarting the empty server; replay and restoration checks passed. Next is T-04.5: investigate automatic native presentation and one in-world interaction before the two-player gameplay slice. Evidence and entry points are linked below.
 
 [PRODUCT](PRODUCT.md) defines the goal; [ROADMAP](ROADMAP.md) defines the longer-range plan. This file owns delivery status and the short queue. Detailed records are in the [task index](tasks/README.md).
 
-T-04.1 and T-04.2 are pushed; hosted CI passed for both commits (runs 35922543716 and 35927119404). T-04.3 changes are local and uncommitted; its expanded suites have not run on GitHub.
+T-04.1 and T-04.2 are pushed; hosted CI passed for both commits (runs 35922543716 and 35927119404). T-04.3 is committed locally at `02099a1`; hosted execution of its expanded suites has not been checked in this task. T-04.4 changes are local and uncommitted.
 
 ## Milestone status
 
@@ -18,7 +18,7 @@ Acceptance definitions live in ROADMAP; this table records status only.
 | --- | --- |
 | M-01 — Runnable server lifecycle | Complete; [T-04.1 evidence](tasks/T-04.1/evidence-2026-09-23.md#result-and-limits) |
 | M-02 — One real player and in-game server response | Complete within explicit chat-polling scope; [T-04.3 evidence](tasks/T-04.3/evidence-2026-09-23.md#result-and-limits) |
-| M-03 — Persistent reconnect and restart | Planned |
+| M-03 — Persistent reconnect and restart | Complete within member-owned chat scope; [T-04.4 evidence](tasks/T-04.4/evidence-2026-09-23.md#result-and-limits) |
 | M-04 — Two players sharing state | Planned |
 | M-05 — Operator admission and selected gameplay rules | Planned |
 | M-06 — Creator/operator alpha | Planned |
@@ -32,14 +32,14 @@ Acceptance definitions live in ROADMAP; this table records status only.
 | T-01 | Research-backed project foundation | Completed; evidence below. ROADMAP expansion makes the proposed construction work visible |
 | T-02 | Operator discovery and scoped permissions/release work | Prepared questions only; runs alongside engineering. Interviews and monetization approval are not prerequisites for an original local service |
 | T-03 | Local game, content, and later multiplayer baselines | T-03.1 / R-011 / E-01a complete; parent incomplete |
-| T-04 | Implement server, game integration, persistence, synchronization, and operator control | T-04.1 / M-01, narrow T-04.2 and T-04.3 / M-02 complete; parent incomplete. Persistence, explicit engine lifecycle API and broader adapter hardening remain open |
+| T-04 | Implement server, game integration, persistence, synchronization, and operator control | T-04.1 / M-01, narrow T-04.2, T-04.3 / M-02 and T-04.4 / M-03 complete; parent incomplete. Automatic presentation, explicit engine lifecycle API, broader adapter hardening and multiplayer remain open |
 | T-05 | Reusable creator/operator platform, pilot, and release | Not started; follows the capabilities it actually uses. Detailed future decomposition is in ROADMAP |
 
 These parent IDs supersede the original coarse queue without renumbering its references. Completing a child completes that child only. The remaining core work is visible in ROADMAP and is not hidden in the optional backlog.
 
 ## Current detailed tasks
 
-Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 draws on R-021–R-030; T-04.4 covers R-031–R-040. T-04.3 supplies the narrow R-019 typed service path and fresh-callback retrieval of delayed replies. R-015's engine lifecycle interface and full R-020/E-03 hardening remain open. Two-endpoint selection has synthetic service evidence, not two actual game-endpoint runs; compatibility is a cooperative self-report. The task does not complete every broader roadmap acceptance item.
+Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001–R-010 service outcome; T-04.2 draws on R-012–R-020; T-04.3 draws on R-021–R-030; T-04.4 covers the scoped R-031–R-040 persistence result; historical schema upgrades and broader failure matrices remain future work. T-04.5 draws on R-015–R-020 and informs R-042–R-044. T-04.3 supplies the narrow R-019 typed service path and fresh-callback retrieval of delayed replies. R-015's engine lifecycle interface and full R-020/E-03 hardening remain open. Two-endpoint selection has synthetic service evidence, not two actual game-endpoint runs; compatibility is a cooperative self-report. The task does not complete every broader roadmap acceptance item.
 
 - [x] **T-03.1 — Owned installation and repeatable native baseline.**
   R-011 / E-01a. [Plan and procedure](tasks/T-03.1/README.md) · [Evidence](tasks/T-03.1/evidence-2026-09-21.md#result-and-limits).
@@ -59,12 +59,15 @@ Queue-to-roadmap mapping: T-03.1 covers R-011; T-04.1 covers the bounded R-001�
   Verify: E-10 initial loop: five actual in-game round trips, a changed server rule producing a changed result, stopped-service handling, and reconnect. One real player is sufficient to complete M-02. No second player or full economy is required.
   Completed within the explicit chat-polling scope: six visible server replies, changed server rule in the same game process, stopped-service feedback, reconnect, leave/menu/reload, disable and normal recovery. One initial reply expired before manual retrieval. Scoped compatibility, typed loopback traffic and cancellation are implemented; 33 service checks and 63 adapter tests passed. [Operation and commands](tasks/T-04.3/README.md) · [Evidence and limits](tasks/T-04.3/evidence-2026-09-23.md#result-and-limits).
 
-- [ ] **T-04.4 — Preserve that player's community state across restart.**
+- [x] **T-04.4 — Preserve that player's community state across restart.**
   Needs: T-04.3 for the full game-connected result; storage/protocol work can begin alongside T-04.2.
-  Next action: Define the persisted member/progression/replay records and transactional storage choice, then connect recovery to the proved chat operation. Keep the configured lab principal independent of session and native save identity. Replace the in-memory 256-request cap with a stated replay-retention window longer than any client retry; persisting the cap unchanged would lock a member permanently, and naive eviction would allow duplicate mutations.
+  [Implementation and maintenance](tasks/T-04.4/README.md) · [Dependency review](tasks/T-04.4/sources.md) · [Evidence](tasks/T-04.4/evidence-2026-09-23.md#result-and-limits).
   Build: Persist one server-owned progression value using transactional storage and request deduplication. Associate it with a stable community-member ID mapped to the configured lab principal, independently of connection/session and native save IDs. Define empty-server behavior; it may idle. Persisted lab identity is not a public entitlement-verification claim.
   Verify: E-10 persistence extension: complete an action, acknowledge it, close the game, restart the empty server, reconnect, recover the same value, and reject a duplicate mutation. This completes M-03; two-player synchronization is the next capability.
-  Completed: Not started.
+  Completed: SQLite state/event/replay transactions, stable member ownership, version-2 adapter progress/read-only query and maintenance commands implemented. 44 service checks and 74 adapter tests passed (75 after [post-review changes](tasks/T-04.4/evidence-2026-09-23.md#post-review-changes-2026-09-24)). Six visible replies across two game processes proved 0 → 1 → 1, then 1 → 2 → 2 across empty-server restart. Exact replay, backup, disable, normal native recovery and final save/settings checks passed; M-03 complete within that scope.
+
+- [ ] **T-04.5 — Investigate automatic presentation and an in-world interaction.**
+  Needs: the verified one-client adapter/service boundary. Next action: review candidate engine-thread/lifecycle hooks and select a reversible non-chat operation with a concrete visible result before implementation. [Plan and acceptance](tasks/T-04.5/README.md). Draws on R-015–R-020 / E-03 and informs R-042–R-044; no two-player capability is claimed.
 
 ## Parallel work and real constraints
 
@@ -72,7 +75,7 @@ Server software, protocol fixtures, data models, and tests with original data ca
 
 Keep relevant code/content licenses and any concrete restrictions attached to the operation they affect. Publisher clarification, public entitlement access, interviews, naming, privacy responsibilities, distribution, hosting, and commercialization are distinct workstreams. Resolve required release conditions before the affected release. Do not require a commercial-launch agreement merely to write an original local server or document native game behavior. Outreach still needs a user instruction to contact people.
 
-Before M-04/M-05 server gameplay builds on the chat bridge, run a game-side investigation: a game-thread presentation path without a second command, and one in-world interaction beyond chat. Its result decides whether those milestones remain game-integrated. The chat bridge supports asynchronous server requests and explicit native result retrieval. Automatic pushed presentation, explicit engine lifecycle signals and the relationship to native multiplayer sessions remain unverified. The 20-second result lifetime was exercised by an initially delayed manual retrieval; this remains a lab usability limit.
+[T-04.5](tasks/T-04.5/README.md) owns the game-side investigation required before M-04/M-05 gameplay builds on the chat bridge. Automatic pushed presentation, explicit engine lifecycle signals and the relationship to native multiplayer sessions remain unverified. The current explicit result command and 20-second result lifetime remain lab usability limits.
 
 ## Completion evidence
 
@@ -89,3 +92,4 @@ Before M-04/M-05 server gameplay builds on the chat bridge, run a game-side inve
 | 2026-09-23 | T-04.1 / R-001–R-010 / M-01 | Standalone service and diagnostic client verified; [results, checks and limits](tasks/T-04.1/evidence-2026-09-23.md). No hosted CI or game integration run |
 | 2026-09-23 | T-04.2 / scoped R-012–R-020 | Native chat adapter proof, repeated responses, menu/reload, disable, process recovery and settings restoration verified; [results, one startup failure, checks and remaining work](tasks/T-04.2/evidence-2026-09-23.md#result-and-limits). No service round trip or full E-03 completion |
 | 2026-09-23 | T-04.3 / scoped R-021–R-030 / M-02 | Six visible replies, server rule change, outage/reconnect, lifecycle/recovery and 33 service + 63 adapter checks verified; [results, expired first display and remaining scope](tasks/T-04.3/evidence-2026-09-23.md#result-and-limits). No persistence or automatic pushed presentation |
+| 2026-09-23 | T-04.4 / scoped R-031–R-040 / M-03 | Stable member progress recovered in a relaunched game after empty-server restart; exact replay, backup/recovery, six visible replies and 44 service + 74 adapter checks passed. [Evidence and limits](tasks/T-04.4/evidence-2026-09-23.md#result-and-limits). Final old-save/settings hashes unchanged; no automatic presentation or two-client proof |

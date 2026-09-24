@@ -6,6 +6,9 @@ local/
 artifacts/
 *.dmp
 *.log
+*.sqlite3
+*.sqlite3-*
+*.owner.lock
 *.pak
 *.mbin
 *.exe

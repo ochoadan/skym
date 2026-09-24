@@ -14,6 +14,8 @@ A local standalone server and diagnostic client are implemented in C#/.NET. An e
 
 ## Implementation entry points
 
+[T-04.4](docs/tasks/T-04.4/README.md) documents current persistent progress, read-only chat queries, database backup/restore and restart verification.
+
 [T-04.1](docs/tasks/T-04.1/README.md) documents the local server. [T-04.2](docs/tasks/T-04.2/README.md) documents the native adapter guards and disposable-save setup. [T-04.3](docs/tasks/T-04.3/README.md) documents the connected chat operation, commands and game checks.
 
 The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. Follow [STEPS](docs/STEPS.md) for the current implementation task and its prerequisites.

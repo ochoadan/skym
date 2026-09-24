@@ -9,7 +9,7 @@ import uuid
 from service_client import ServiceClient, ServiceError
 
 
-COMMANDS = (b"/community", b"/community result", b"/community reconnect",
+COMMANDS = (b"/community", b"/community state", b"/community result", b"/community reconnect",
             b"/community leave", b"/community off")
 LIFETIME = 20.0
 
@@ -27,6 +27,7 @@ class Work:
     request_id: str
     deadline: float
     cancel: threading.Event
+    operation: str
 
 
 class Bridge:
@@ -80,29 +81,34 @@ class Bridge:
             if self._pending and self.clock() >= self._pending.deadline:
                 expired = self._pending
                 self._invalidate()
-                self._ready = (expired, "Community request expired; outcome unknown. Use /community to retry.")
+                self._ready = (expired, "Community request expired. Use /community state to check saved progress.")
                 self.emit("request_expired", request_id=expired.request_id, generation=expired.generation)
             if command == b"/community result":
                 if self._ready:
                     work, message = self._ready
                     self._ready = None
                     if self.clock() >= work.deadline:
-                        message = "Community result expired; outcome unknown. Use /community for a new request."
-                    self.emit("server_presentation", request_id=work.request_id, generation=work.generation)
+                        message = ("Community result expired; outcome unknown. Use /community state to check saved progress."
+                                   if work.operation == "probe" else
+                                   "Community state result expired. Use /community state to read again.")
+                    self.emit("server_presentation", request_id=work.request_id, generation=work.generation,
+                              operation=work.operation)
                     return display(message)
                 return (b"Community connecting or waiting. Use /community result shortly." if self._pending
                         else b"No community result pending. Use /community to send a request.")
             if self._pending or self._ready:
                 return b"Community request already pending or ready. Use /community result."
-            work = Work(self._generation, str(uuid.uuid4()), self.clock() + LIFETIME, threading.Event())
+            operation = "state" if command == b"/community state" else "probe"
+            work = Work(self._generation, str(uuid.uuid4()), self.clock() + LIFETIME, threading.Event(), operation)
             try:
                 self._enqueue(work)
             except queue.Full:
                 return b"Community reconnecting; try /community shortly."
             self._pending = work
             self.emit("server_request_queued", request_id=work.request_id, generation=work.generation,
-                      community=self.config.community)
-            return display(f"Community {self.config.community}: connecting/sending. Use /community result.")
+                      community=self.config.community, operation=work.operation)
+            action = "connecting/reading saved progress" if operation == "state" else "connecting/sending"
+            return display(f"Community {self.config.community}: {action}. Use /community result.")
         finally:
             self._lock.release()
 
@@ -116,17 +122,24 @@ class Bridge:
                 continue
             cancelled = lambda: work.cancel.is_set() or self.clock() >= work.deadline
             try:
-                message, revision = self._client.probe(work.request_id, cancelled)
-                text = f"[{self.config.community} #{revision}] {message}"
+                state = (self._client.state(cancelled) if work.operation == "state" else
+                         self._client.probe(work.request_id, cancelled))
+                text = (f"[{self.config.community} #{state['revision']} progress {state['progress']}] "
+                        f"{state['message']}")
                 self.emit("server_response", request_id=work.request_id, generation=work.generation,
-                          revision=revision)
+                          operation=work.operation, member_id=state["memberId"],
+                          interaction_id=state["interactionId"], revision=state["revision"],
+                          progress=state["progress"])
             except ServiceError as error:
                 code = str(error)
                 if code == "unavailable":
-                    text = "Community server unavailable or timed out; outcome unknown. Check server, then /community."
+                    text = ("Community server unavailable or timed out; outcome unknown. Check server, then /community state."
+                            if work.operation == "probe" else
+                            "Community server unavailable or timed out. Check server, then /community state.")
                 else:
                     text = f"Community rejected or disconnected ({code}). Check setup, then /community reconnect."
-                self.emit("server_failure", request_id=work.request_id, generation=work.generation, code=code)
+                self.emit("server_failure", request_id=work.request_id, generation=work.generation,
+                          operation=work.operation, code=code)
             except Exception:
                 # Never let exception text (which could include credentials) reach chat or logs.
                 text = "Community client error. Use /community reconnect."

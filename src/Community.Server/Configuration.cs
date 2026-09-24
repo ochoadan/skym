@@ -45,10 +45,12 @@ internal static partial class Configuration
         if (string.IsNullOrWhiteSpace(config.DataDirectory) || Path.IsPathRooted(config.DataDirectory) ||
             config.DataDirectory.Split('/', '\\').Any(part => part is ".." or "." or ""))
             throw new InvalidDataException("Data directory must be a child path relative to the configuration file.");
-        var directory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, config.DataDirectory));
-        Directory.CreateDirectory(directory);
         return config;
     }
+
+    public static string DatabasePath(string configurationPath, ServerConfig config) => Path.Combine(
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configurationPath))!, config.DataDirectory)),
+        "community.sqlite3");
 
     private static bool Identifier(string? value) => value is not null && IdPattern().IsMatch(value);
     private static bool Key(string? value) => value is { Length: >= 32 and <= 128 } && value.All(c => c is >= '!' and <= '~');

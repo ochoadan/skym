@@ -79,6 +79,8 @@ The service should never accept a client-supplied reward amount. A signed or enc
 
 ## 4. Protocol and persistence
 
+The current one-process local-disk implementation uses SQLite, stable member IDs, atomic state/event/replay commits, a 24-hour replay window and idle empty-server behavior. [T-04.4](tasks/T-04.4/README.md#storage-identity-and-recovery-contract) owns its concrete storage and maintenance limits; the [wire reference](tasks/T-04.1/protocol.md) owns protocol version 2. The broader designs below remain proposals beyond that scope.
+
 For the first local service proof, HTTP/WebSockets may run on explicitly bound loopback addresses with scoped lab credentials, request limits, and appropriate browser-origin checks. Do not bind this lab configuration to all network interfaces. Remote connections require authenticated encryption and server-identity verification under R-089; the local exception must not become an automatic remote downgrade. Choose and record the initial transport at R-004. TCP/WebSockets are a reasonable prototype option for RP commands; they are not a performance conclusion for high-rate movement replication.
 
 Proposed command fields: protocol version, community ID, session ID, request ID, expected state revision, command type, and bounded payload. Derive the actor and role from the verified session. Bind replay protection to actor, community, command, and expiry. Use server time for deadlines; record client times only as observations.

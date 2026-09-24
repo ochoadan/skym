@@ -13,6 +13,12 @@ from interaction import Interaction
 from service_client import ClientConfig, ServiceError
 
 
+def service_result(message="Original server response.", revision=1, progress=None):
+    return {"message": message, "revision": revision, "progress": revision if progress is None else progress,
+            "memberId": "55555555-5555-4555-8555-555555555555",
+            "interactionId": "22222222-2222-4222-8222-222222222222", "status": "available"}
+
+
 class Events:
     def __init__(self):
         self.records = []
@@ -31,7 +37,7 @@ class Events:
 
 @dataclass
 class Reply:
-    value: object = ("Original server response.", 1)
+    value: object = field(default_factory=service_result)
     release: threading.Event = field(default_factory=threading.Event)
     started: threading.Event = field(default_factory=threading.Event)
     cancelled: object = None
@@ -44,9 +50,18 @@ class DelayedClient:
     def __init__(self, replies):
         self.replies = replies
         self.calls = 0
+        self.operations = []
         self.closed = threading.Event()
 
     def probe(self, request_id, cancelled):
+        self.operations.append("probe")
+        return self.respond(request_id, cancelled)
+
+    def state(self, cancelled):
+        self.operations.append("state")
+        return self.respond(None, cancelled)
+
+    def respond(self, request_id, cancelled):
         reply = self.replies[self.calls]
         self.calls += 1
         reply.request_id = request_id
@@ -113,7 +128,7 @@ class BridgeTests(unittest.TestCase):
             self.assertIn(b"connecting or waiting", self.command(interaction, b"/community result"))
         self.assertEqual(client.calls, 1)
         reply.release.set()
-        self.assertEqual(self.result(interaction), b"[test-community #1] Original server response.")
+        self.assertEqual(self.result(interaction), b"[test-community #1 progress 1] Original server response.")
         self.assertIn(b"No community result", self.command(interaction, b"/community result"))
         self.assertEqual(client.calls, 1)
         self.assertEqual(sum(name == "server_presentation" for name, _ in self.events.records), 1)
@@ -128,6 +143,66 @@ class BridgeTests(unittest.TestCase):
         self.assertIsNone(interaction.reply(True))
         self.assertIn(b"No community result", self.command(interaction, b"/community result"))
         self.assertEqual(client.calls, 0)
+
+    def test_state_command_is_async_read_only_and_displays_progress_once(self):
+        reply = Reply(service_result("Persisted response.", 301, 299))
+        _, client, interaction = self.make_bridge(reply)
+        started = time.monotonic()
+        self.assertIn(b"reading saved progress", self.command(interaction, b"/community state"))
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertTrue(reply.started.wait(2))
+        self.assertIn(b"already pending", self.command(interaction, b"/community"))
+        self.assertIn(b"already pending", self.command(interaction, b"/community state"))
+        reply.release.set()
+        self.assertEqual(self.result(interaction), b"[test-community #301 progress 299] Persisted response.")
+        self.assertIn(b"No community result", self.command(interaction, b"/community result"))
+        self.assertEqual(client.operations, ["state"])
+        response = next(fields for name, fields in self.events.records if name == "server_response")
+        self.assertEqual((response["operation"], response["progress"], response["member_id"]),
+                         ("state", 299, reply.value["memberId"]))
+
+    def test_state_without_correlated_native_reply_or_exact_command_does_nothing(self):
+        _, client, interaction = self.make_bridge(Reply())
+        interaction.begin(b"/community state")
+        self.assertIsNone(interaction.reply(False))
+        interaction.end()
+        for text in (b"/community statex", b"/community state ", b" /community state"):
+            self.assertIsNone(self.command(interaction, text))
+        self.assertEqual(client.operations, [])
+
+    def test_reconnect_cancels_state_read_and_next_read_keeps_progress(self):
+        old = Reply(service_result("Old read.", 300, 298))
+        new = Reply(service_result("Fresh read.", 300, 298))
+        _, client, interaction = self.make_bridge(old, new)
+        self.command(interaction, b"/community state")
+        self.assertTrue(old.started.wait(2))
+        self.command(interaction, b"/community reconnect")
+        self.assertTrue(old.cancelled())
+        old.release.set()
+        self.assertTrue(self.events.wait("late_response_discarded"))
+        self.assertTrue(client.closed.wait(2))
+        deadline = time.monotonic() + 2
+        while b"reading saved progress" not in self.command(interaction, b"/community state"):
+            self.assertLess(time.monotonic(), deadline)
+            threading.Event().wait(0.005)
+        self.assertTrue(new.started.wait(2))
+        new.release.set()
+        self.assertEqual(self.result(interaction), b"[test-community #300 progress 298] Fresh read.")
+        self.assertEqual(client.operations, ["state", "state"])
+
+    def test_expired_state_read_can_be_reissued_without_a_mutation(self):
+        reply = Reply()
+        _, client, interaction = self.make_bridge(reply)
+        self.command(interaction, b"/community state")
+        self.assertTrue(reply.started.wait(2))
+        self.now += LIFETIME + 1
+        value = self.command(interaction, b"/community result")
+        self.assertIn(b"state result expired", value)
+        self.assertNotIn(b"outcome unknown", value)
+        self.assertTrue(reply.cancelled())
+        reply.release.set()
+        self.assertTrue(self.events.wait("late_response_discarded"))
+        self.assertEqual(client.operations, ["state"])
 
     def test_ready_result_survives_missing_unrelated_and_other_thread_native_replies(self):
         reply = Reply()
@@ -150,13 +225,13 @@ class BridgeTests(unittest.TestCase):
         self.assertIsNone(interaction.reply(False))
         interaction.end()
         self.assertFalse(any(name == "server_presentation" for name, _ in self.events.records))
-        self.assertEqual(self.result(interaction), b"[test-community #1] Original server response.")
+        self.assertEqual(self.result(interaction), b"[test-community #1 progress 1] Original server response.")
 
     def test_leave_and_reconnect_discard_late_response_before_accepting_new_generation(self):
         for lifecycle_command in (b"/community leave", b"/community reconnect"):
             with self.subTest(command=lifecycle_command):
-                old = Reply(("Old generation must disappear.", 1))
-                new = Reply(("Fresh generation response.", 2))
+                old = Reply(service_result("Old generation must disappear.", 1))
+                new = Reply(service_result("Fresh generation response.", 2))
                 _, client, interaction = self.make_bridge(old, new)
                 discarded_before = sum(name == "late_response_discarded" for name, _ in self.events.records)
                 self.command(interaction, b"/community")
@@ -175,7 +250,7 @@ class BridgeTests(unittest.TestCase):
                 self.assertFalse(new.cancelled())
                 self.assertNotEqual(old.request_id, new.request_id)
                 new.release.set()
-                self.assertEqual(self.result(interaction), b"[test-community #2] Fresh generation response.")
+                self.assertEqual(self.result(interaction), b"[test-community #2 progress 2] Fresh generation response.")
 
     def test_off_cancels_pending_request_without_waiting_then_closes_worker(self):
         reply = Reply()
@@ -215,7 +290,7 @@ class BridgeTests(unittest.TestCase):
         self.assertFalse(bridge._thread.is_alive())
 
     def test_expired_pending_request_is_cancelled_and_its_late_result_is_not_presented(self):
-        reply = Reply(("Expired success must disappear.", 1))
+        reply = Reply(service_result("Expired success must disappear.", 1))
         _, _, interaction = self.make_bridge(reply)
         self.command(interaction, b"/community")
         self.assertTrue(reply.started.wait(2))
@@ -227,7 +302,7 @@ class BridgeTests(unittest.TestCase):
         self.assertIn(b"No community result", self.command(interaction, b"/community result"))
 
     def test_ready_response_also_expires_before_the_next_game_callback(self):
-        reply = Reply(("Expired ready result must disappear.", 1))
+        reply = Reply(service_result("Expired ready result must disappear.", 1))
         bridge, _, interaction = self.make_bridge(reply)
         self.command(interaction, b"/community")
         self.assertTrue(reply.started.wait(2))
@@ -253,7 +328,7 @@ class BridgeTests(unittest.TestCase):
                                 (RuntimeError("SECRET-CREDENTIAL-DO-NOT-LOG"), b"client error")):
             with self.subTest(error=type(error).__name__, expected=expected):
                 failed = Reply(error)
-                recovered = Reply(("Recovered.", 2))
+                recovered = Reply(service_result("Recovered.", 2))
                 _, _, interaction = self.make_bridge(failed, recovered)
                 failed.release.set()
                 self.command(interaction, b"/community")
@@ -263,10 +338,10 @@ class BridgeTests(unittest.TestCase):
                 self.assertNotIn("SECRET", repr(self.events.records))
                 recovered.release.set()
                 self.command(interaction, b"/community")
-                self.assertEqual(self.result(interaction), b"[test-community #2] Recovered.")
+                self.assertEqual(self.result(interaction), b"[test-community #2 progress 2] Recovered.")
 
     def test_service_text_is_ascii_bounded_and_cannot_introduce_native_formatting(self):
-        reply = Reply(("<RED>\n\x00\u2603" + "x" * 700, 1))
+        reply = Reply(service_result("<RED>\n\x00\u2603" + "x" * 700, 1))
         _, _, interaction = self.make_bridge(reply)
         reply.release.set()
         self.command(interaction, b"/community")

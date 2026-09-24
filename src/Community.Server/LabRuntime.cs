@@ -10,19 +10,12 @@ internal sealed class ApiFault(int status, string code) : Exception(code)
     public string Code { get; } = code;
 }
 
-internal sealed class LabRuntime(ServerConfig config)
+internal sealed class LabRuntime(ServerConfig config, PersistentStore store)
 {
     private sealed record Session(Guid Id, string PrincipalId, DateTimeOffset ExpiresAt, bool Adapter);
-    private sealed class Contract
-    {
-        public InteractionState State { get; set; } = new(Guid.NewGuid(), 0, "available", "");
-        public Dictionary<Guid, (CommandRequest Request, CommandResponse Response)> Requests { get; } = [];
-        public List<StateEvent> Events { get; } = [];
-    }
 
     private readonly object gate = new();
     private readonly Dictionary<string, Session> sessions = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Contract> contracts = config.Principals.ToDictionary(p => p.Id, _ => new Contract());
 
     public static bool SecretEquals(string? candidate, string expected) => candidate is { Length: <= 128 } &&
         CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(candidate)), SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
@@ -78,16 +71,14 @@ internal sealed class LabRuntime(ServerConfig config)
 
     public StateResponse State(string token)
     {
-        lock (gate) return new(Wire.Version, config.CommunityId, contracts[Authenticate(token).PrincipalId].State);
+        lock (gate) return new(Wire.Version, config.CommunityId, store.State(Authenticate(token).PrincipalId));
     }
 
     public EventsResponse Events(string token, long after)
     {
         lock (gate)
         {
-            var contract = contracts[Authenticate(token).PrincipalId];
-            if (after < 0 || after > contract.State.Revision) throw new ApiFault(400, "invalid_cursor");
-            return new(Wire.Version, config.CommunityId, contract.Events.Where(e => e.State.Revision > after).ToArray(), contract.State.Revision);
+            return store.Events(Authenticate(token).PrincipalId, after);
         }
     }
 
@@ -98,36 +89,13 @@ internal sealed class LabRuntime(ServerConfig config)
             var session = Authenticate(token);
             Envelope(request.ProtocolVersion, request.CommunityId, request.RequestId);
             if (request.Payload is null || request.Payload.InteractionId == Guid.Empty || request.ExpectedRevision < 0 ||
+                request.ExpectedRevision > PersistentStore.CounterLimit ||
                 request.CommandType is not ("accept" or "complete" or "reset" or "probe")) throw new ApiFault(400, "invalid_command");
             var probe = request.CommandType == "probe";
             // Scope precedes replay lookup, so a differently scoped session cannot replay a privileged command.
             if (session.Adapter && !probe) throw new ApiFault(403, "session_scope");
             if (!session.Adapter && probe) throw new ApiFault(403, "adapter_required");
-            var contract = contracts[session.PrincipalId];
-            if (contract.Requests.TryGetValue(request.RequestId, out var prior))
-            {
-                if (prior.Request != request) throw new ApiFault(409, "request_id_conflict");
-                return prior.Response;
-            }
-            if (request.Payload.InteractionId != contract.State.InteractionId) throw new ApiFault(404, "unknown_interaction");
-            if (request.ExpectedRevision != contract.State.Revision) throw new ApiFault(409, "stale_revision");
-            var next = (contract.State.Status, request.CommandType) switch
-            {
-                (_, "probe") => contract.State.Status,
-                ("available", "accept") => "accepted",
-                ("accepted", "complete") => "completed",
-                ("completed", "reset") => "available",
-                _ => throw new ApiFault(409, "invalid_transition")
-            };
-            // Never evict deduplication entries and accidentally execute an old request twice.
-            if (contract.Requests.Count >= 256) throw new ApiFault(429, "interaction_capacity");
-            contract.State = new(contract.State.InteractionId, contract.State.Revision + 1, next,
-                probe || next == "completed" ? config.CompletionMessage : "");
-            var change = new StateEvent(Guid.NewGuid(), request.RequestId, probe ? "interaction.probed" : "interaction.changed", contract.State);
-            var response = new CommandResponse(Wire.Version, request.RequestId, config.CommunityId, contract.State, change);
-            contract.Requests.Add(request.RequestId, (request, response));
-            contract.Events.Add(change);
-            return response;
+            return store.Apply(session.PrincipalId, request);
         }
     }
 }

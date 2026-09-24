@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <None Update="THIRD-PARTY-NOTICES.md;licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <ProjectReference Include="../Community.Protocol/Community.Protocol.csproj" />
     <EmbeddedResource Include="../../config/server.example.json" LogicalName="Community.Server.DefaultConfig" />
   </ItemGroup>

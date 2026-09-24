@@ -31,3 +31,7 @@ Date: 2026-09-20; framing clarified 2026-09-21. ROADMAP owns the long-range engi
 ## D-008 — Propose a local service as the first build increment
 
 Date: 2026-09-20; framing clarified 2026-09-21. A local service, diagnostic client, and in-memory state provide an initial software outcome independent of game access and future hosting. T-04.1 / R-001–R-010 is therefore the proposed entry point in STEPS, with tooling selected during that work. The loopback lab policy, encrypted remote transport, and stable community-member ownership remain technical requirements in ARCHITECTURE. The user's note, *Expressing Intent Without Prescribing Behavior*, prompted removal of duplicated sequencing and failure-response instructions; it did not supply a replacement behavioral formula.
+
+## D-009 — Persist member progress with local SQLite transactions
+
+Date: 2026-09-23. T-04.4 uses SQLite for one locally operated service, with stable member ownership, atomic state/event/replay writes and durable polling recovery. This avoids a separate database daemon while supplying transactions and backup support. PostgreSQL remains an option for broader deployment needs. Protocol version 2 explicitly carries member/progress data; sessions remain ephemeral, and progression counts cooperative chat interactions. [Task contract](docs/tasks/T-04.4/README.md), [alternatives and dependency review](docs/tasks/T-04.4/sources.md).

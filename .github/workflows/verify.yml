@@ -17,7 +17,10 @@ jobs:
           global-json-file: global.json
       - name: Build and test real local processes
         shell: pwsh
-        run: dotnet run --project tests/Community.Tests --configuration Release
+        run: |
+          dotnet restore CommunityPlatform.slnx --locked-mode
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --project tests/Community.Tests --configuration Release --no-restore
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.13'

@@ -2,7 +2,7 @@
 
 Build the Release server first. Only missing .NET 10/runtime artifacts cause skips;
 protocol, startup, timeout and assertion failures fail the test. Private temporary
-configuration and child logs are retained under ignored local/t04-3/tests.
+configuration and child logs are retained under ignored local/t04-4/tests.
 """
 
 import http.client
@@ -87,7 +87,7 @@ class ServerProcess:
             try:
                 status, raw = self.request("GET", "/health")
                 if status == 200 and json.loads(raw) == {
-                    "protocolVersion": 1, "communityId": self.config["communityId"], "status": "ready"
+                    "protocolVersion": 2, "communityId": self.config["communityId"], "status": "ready"
                 }:
                     return
             except (OSError, http.client.HTTPException):
@@ -140,7 +140,7 @@ class BridgeProcessTests(unittest.TestCase):
             raise unittest.SkipTest("Python/C# integration needs the ASP.NET Core 10 runtime")
 
     def setUp(self):
-        evidence_root = REPOSITORY / "local/t04-3/tests"
+        evidence_root = REPOSITORY / "local/t04-4/tests"
         evidence_root.mkdir(parents=True, exist_ok=True)
         self.directory = Path(tempfile.mkdtemp(prefix=self._testMethodName + "-", dir=evidence_root))
         self.servers = []
@@ -184,8 +184,9 @@ class BridgeProcessTests(unittest.TestCase):
         finally:
             interaction.end()
 
-    def action(self, interaction):
-        self.assertIn(b"connecting/sending", self.command(interaction, b"/community"))
+    def action(self, interaction, command=b"/community"):
+        expected = b"reading saved progress" if command == b"/community state" else b"connecting/sending"
+        self.assertIn(expected, self.command(interaction, command))
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             value = self.command(interaction, b"/community result")
@@ -203,21 +204,25 @@ class BridgeProcessTests(unittest.TestCase):
         interaction = Interaction(emit, bridge)
         for revision in range(1, 6):
             self.assertEqual(self.action(interaction),
-                             f"[bridge-process #{revision}] Original operator rule.".encode())
+                             f"[bridge-process #{revision} progress {revision}] Original operator rule.".encode())
             self.assertIn(b"No community result", self.command(interaction, b"/community result"))
         self.tokens.append(client.token)
-        # Revision changes are server-owned; the original contract status stays available.
-        state = client._http("GET", "/state")["state"]
-        self.assertEqual((state["revision"], state["status"]), (5, "available"))
+        # Progress belongs to the stable member, independently of session/native save.
+        state = client.state()
+        self.assertEqual((state["revision"], state["progress"], state["status"]), (5, 5, "available"))
         server.stop()
         unavailable = self.action(interaction)
         self.assertIn(b"unavailable or timed out", unavailable)
         self.assertNotIn(b"Original operator rule", unavailable)
         server.config["completionMessage"] = "Changed operator rule after restart."
         server.start()
-        # The invalid old session is replaced automatically; no failed mutation is retried.
+        # Recover read-only before taking another action; config changes affect new commands only.
+        self.assertEqual(self.action(interaction, b"/community state"),
+                         b"[bridge-process #5 progress 5] Original operator rule.")
+        self.assertEqual(client.state(), state)
+        # The invalid old session was replaced; no failed mutation was retried.
         self.assertEqual(self.action(interaction),
-                         b"[bridge-process #1] Changed operator rule after restart.")
+                         b"[bridge-process #6 progress 6] Changed operator rule after restart.")
         self.assertNotEqual(client.token, self.tokens[0])
         self.tokens.append(client.token)
         self.assertIn(b"disconnected", self.command(interaction, b"/community leave"))
@@ -225,16 +230,22 @@ class BridgeProcessTests(unittest.TestCase):
         while client.token is not None:
             self.assertLess(time.monotonic(), deadline)
             threading.Event().wait(0.01)
+        self.assertEqual(self.action(interaction, b"/community state"),
+                         b"[bridge-process #6 progress 6] Changed operator rule after restart.")
         self.assertEqual(self.action(interaction),
-                         b"[bridge-process #2] Changed operator rule after restart.")
+                         b"[bridge-process #7 progress 7] Changed operator rule after restart.")
         queued = [event["request_id"] for event in self.events if event["event"] == "server_request_queued"]
         answered = [event["request_id"] for event in self.events if event["event"] == "server_response"]
         presented = [event["request_id"] for event in self.events if event["event"] == "server_presentation"]
-        self.assertEqual(len(queued), 8)
-        self.assertEqual(len(set(queued)), 8)
-        self.assertEqual(len(answered), 7)
+        self.assertEqual(len(queued), 10)
+        self.assertEqual(len(set(queued)), 10)
+        self.assertEqual(len(answered), 9)
         self.assertEqual(presented, queued)
         self.assertTrue(set(answered).issubset(queued))
+        responses = [event for event in self.events if event["event"] == "server_response"]
+        self.assertEqual({event["member_id"] for event in responses}, {state["memberId"]})
+        self.assertEqual({event["interaction_id"] for event in responses}, {state["interactionId"]})
+        self.assertEqual([event["progress"] for event in responses], [1, 2, 3, 4, 5, 5, 6, 6, 7])
         bridge.handle(b"/community off")
         bridge._thread.join(5)
         self.assertFalse(bridge._thread.is_alive())
@@ -243,15 +254,45 @@ class BridgeProcessTests(unittest.TestCase):
         for secret in [server.config["adminKey"], client.config.key, *self.tokens]:
             self.assertNotIn(secret, all_logs)
 
+    def test_new_client_recovers_committed_state_and_identical_replay_after_empty_server_restart(self):
+        server = self.server("persisted-client", "Persisted operator response.")
+        client = self.client(server)
+        before = client.state()
+        request_id = str(uuid.uuid4())
+        committed = client.probe(request_id)
+        replay = {"protocolVersion": 2, "communityId": client.config.community, "requestId": request_id,
+                  "expectedRevision": before["revision"], "commandType": "probe",
+                  "payload": {"interactionId": before["interactionId"]}}
+        original = client._http("POST", "/commands", replay)
+        self.assertEqual(original["state"], committed)
+        client.close()
+        server.stop()
+        server.start()
+        returning = self.client(server)
+        self.assertEqual(returning.state(), committed)
+        self.assertEqual(returning._http("POST", "/commands", replay), original)
+        self.assertEqual(returning.state(), committed)
+        continued = returning.probe(str(uuid.uuid4()))
+        self.assertEqual((continued["revision"], continued["progress"]), (2, 2))
+        self.assertEqual(continued["memberId"], before["memberId"])
+        self.assertEqual(continued["interactionId"], before["interactionId"])
+
     def test_two_endpoints_preserve_community_identity_messages_and_independent_state(self):
         first = self.server("community-first", "First operator's response.")
         second = self.server("community-second", "Second operator's response.")
         self.assertNotEqual(first.config["port"], second.config["port"])
         first_client, second_client = self.client(first), self.client(second)
-        self.assertEqual(first_client.probe(str(uuid.uuid4())), ("First operator's response.", 1))
-        self.assertEqual(second_client.probe(str(uuid.uuid4())), ("Second operator's response.", 1))
-        self.assertEqual(first_client.probe(str(uuid.uuid4())), ("First operator's response.", 2))
-        self.assertEqual(second_client._http("GET", "/state")["state"]["revision"], 1)
+        first_state = first_client.probe(str(uuid.uuid4()))
+        second_state = second_client.probe(str(uuid.uuid4()))
+        self.assertEqual((first_state["message"], first_state["revision"], first_state["progress"]),
+                         ("First operator's response.", 1, 1))
+        self.assertEqual((second_state["message"], second_state["revision"], second_state["progress"]),
+                         ("Second operator's response.", 1, 1))
+        self.assertNotEqual(first_state["memberId"], second_state["memberId"])
+        continued = first_client.probe(str(uuid.uuid4()))
+        self.assertEqual((continued["message"], continued["revision"], continued["progress"]),
+                         ("First operator's response.", 2, 2))
+        self.assertEqual(second_client.state(), second_state)
         selected = second_client.config
         wrong_community = ServiceClient(ClientConfig(selected.port, "community-first", selected.principal,
                                                      selected.key))
@@ -259,7 +300,7 @@ class BridgeProcessTests(unittest.TestCase):
         with self.assertRaisesRegex(ServiceError, "^wrong_community$"):
             wrong_community.probe(str(uuid.uuid4()))
         self.assertIsNone(wrong_community.token)
-        self.assertEqual(second_client._http("GET", "/state")["state"]["revision"], 1)
+        self.assertEqual(second_client.state(), second_state)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@
 
 Scope: R-021–R-030 / E-10 initial loop, with the required subset of R-018/R-019. Started 2026-09-23 at the user's request. [STEPS](../../STEPS.md) owns status; [evidence](evidence-2026-09-23.md) separates software checks from actual game observations.
 
+This record describes the completed T-04.3 version-1 experiment. Current protocol, persistence, progress display and `/community state` setup are in [T-04.4](../T-04.4/README.md); its coordinated version-2 client/server supersede the memory-only behavior below. Dated T-04.3 observations remain unchanged.
+
 ## Selected action and visible result
 
 In the disposable NMS save, submit `/community`, then `/community result` within 20 seconds. The first command queues one request; the second displays the server-selected response, for example `[local-lab #1] Server rule A: welcome to the community.` Change the server's `completionMessage`, restart it, and repeat: the new text must appear inside the same running game. The revision counts server interactions, not physical gameplay progress.

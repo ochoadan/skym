@@ -24,27 +24,29 @@ REQUEST = "11111111-1111-4111-8111-111111111111"
 INTERACTION = "22222222-2222-4222-8222-222222222222"
 SESSION = "33333333-3333-4333-8333-333333333333"
 EVENT = "44444444-4444-4444-8444-444444444444"
+MEMBER = "55555555-5555-4555-8555-555555555555"
 TOKEN = "A" * 64
 KEY = "original-test-key-" * 3
 COMMUNITY = "test-community"
 MESSAGE = "Response selected by the test server."
 
 
-def state(revision=0, message=""):
-    return {"interactionId": INTERACTION, "revision": revision,
+def state(revision=0, message="", progress=None):
+    return {"memberId": MEMBER, "interactionId": INTERACTION, "revision": revision,
+            "progress": revision if progress is None else progress,
             "status": "available", "message": message}
 
 
 def fixture(path, body):
     if path == "/sessions":
-        return {"protocolVersion": 1, "requestId": body["requestId"],
+        return {"protocolVersion": 2, "requestId": body["requestId"],
                 "communityId": COMMUNITY, "sessionId": SESSION, "accessToken": TOKEN,
                 "expiresAt": "2030-01-01T00:00:00+00:00"}
     if path == "/state":
-        return {"protocolVersion": 1, "communityId": COMMUNITY, "state": state()}
+        return {"protocolVersion": 2, "communityId": COMMUNITY, "state": state()}
     if path == "/commands":
         result = state(1, MESSAGE)
-        return {"protocolVersion": 1, "requestId": body["requestId"],
+        return {"protocolVersion": 2, "requestId": body["requestId"],
                 "communityId": COMMUNITY, "state": result,
                 "event": {"eventId": EVENT, "requestId": body["requestId"],
                           "eventType": "interaction.probed", "state": deepcopy(result)}}
@@ -170,7 +172,7 @@ class ConfigurationTests(unittest.TestCase):
                                       "principals": [{"id": "alice", "key": KEY},
                                                      {"id": "bob", "key": "other-key"}]}),
                           encoding="utf-8")
-        output = self.root / "local" / "t04-3" / "client.json"
+        output = self.root / "local" / "t04-4" / "client.json"
         # Reproduce the repository directory layout under the isolated test directory.
         module_path = self.root / "src" / "Community.AdapterLab" / "service_client.py"
         arguments = ["service_client.py", "--server-config", str(source), "--out", str(output)]
@@ -211,7 +213,7 @@ class ServiceClientTests(unittest.TestCase):
 
     def test_real_http_round_trip_binds_scope_and_correlation(self):
         with Peer() as peer:
-            self.assertEqual(peer.client().probe(REQUEST), (MESSAGE, 1))
+            self.assertEqual(peer.client().probe(REQUEST), state(1, MESSAGE))
         self.assertEqual([(method, path) for method, path, _, _ in peer.requests],
                          [("POST", "/sessions"), ("GET", "/state"), ("POST", "/commands")])
         session = peer.requests[0]
@@ -220,11 +222,61 @@ class ServiceClientTests(unittest.TestCase):
         self.assertEqual(session[2]["principalId"], "alice")
         self.assertEqual(session[2]["communityId"], COMMUNITY)
         self.assertEqual(peer.requests[-1][2], {
-            "protocolVersion": 1, "communityId": COMMUNITY, "requestId": REQUEST,
+            "protocolVersion": 2, "communityId": COMMUNITY, "requestId": REQUEST,
             "expectedRevision": 0, "commandType": "probe", "payload": {"interactionId": INTERACTION}})
         for _, _, _, headers in peer.requests[1:]:
             self.assertEqual(headers["Authorization"], "Bearer " + TOKEN)
         self.assertNotIn("reward", peer.requests[-1][2])
+
+    def test_read_only_state_reuses_session_without_mutating_or_advancing_progress(self):
+        with Peer() as peer:
+            client = peer.client()
+            self.assertEqual(client.state(), state())
+            self.assertEqual(client.state(), state())
+        self.assertEqual([request[1] for request in peer.requests], ["/sessions", "/state", "/state"])
+
+    def test_persisted_revision_over_256_is_valid_and_progress_is_independent(self):
+        def respond(method, path, body):
+            value = fixture(path, body)
+            if path == "/state":
+                value["state"] = state(900, MESSAGE, 500)
+            elif path == "/commands":
+                value["state"] = state(901, MESSAGE, 501)
+                value["event"]["state"] = deepcopy(value["state"])
+            return Reply(value)
+
+        with Peer(respond) as peer:
+            self.assertEqual(peer.client().probe(REQUEST), state(901, MESSAGE, 501))
+        self.assertEqual(peer.requests[-1][2]["expectedRevision"], 900)
+
+    def test_progress_amount_is_a_server_rule_but_saved_progress_cannot_decrease(self):
+        def respond_with(progress):
+            def respond(method, path, body):
+                value = fixture(path, body)
+                if path == "/state":
+                    value["state"] = state(10, MESSAGE, 5)
+                elif path == "/commands":
+                    value["state"] = state(11, MESSAGE, progress)
+                    value["event"]["state"] = deepcopy(value["state"])
+                return Reply(value)
+            return respond
+
+        for progress in (5, 6, 8):
+            with self.subTest(accepted=progress), Peer(respond_with(progress)) as peer:
+                self.assertEqual(peer.client().probe(REQUEST), state(11, MESSAGE, progress))
+        with Peer(respond_with(4)) as peer:
+            self.assert_error("invalid_response", lambda: peer.client().probe(REQUEST))
+
+    def test_largest_safe_revision_is_accepted_for_read_only_state(self):
+        def respond(method, path, body):
+            value = fixture(path, body)
+            if path == "/state":
+                value["state"] = state(service_client.MAX_REVISION, MESSAGE)
+            return Reply(value)
+
+        with Peer(respond) as peer:
+            self.assertEqual(peer.client().state(), state(service_client.MAX_REVISION, MESSAGE))
+        self.assertEqual([request[1] for request in peer.requests], ["/sessions", "/state"])
 
     def assert_invalid_at(self, target, transform):
         def respond(method, path, body):
@@ -238,7 +290,7 @@ class ServiceClientTests(unittest.TestCase):
         self.assertEqual(peer.requests[-1][1], target)
 
     def test_session_schema_and_correlation_mismatches_stop_before_mutation(self):
-        cases = [(("protocolVersion",), True), (("protocolVersion",), 2),
+        cases = [(("protocolVersion",), True), (("protocolVersion",), 1),
                  (("requestId",), INTERACTION), (("communityId",), "other-community"),
                  (("sessionId",), "00000000-0000-0000-0000-000000000000"),
                  (("sessionId",), "not-a-uuid"), (("accessToken",), "a" * 64),
@@ -253,10 +305,14 @@ class ServiceClientTests(unittest.TestCase):
 
     def test_state_schema_rejection_prevents_command(self):
         cases = [(("protocolVersion",), True), (("communityId",), "other-community"),
+                 (("state", "memberId"), "00000000-0000-0000-0000-000000000000"),
+                 (("state", "memberId"), True), (("state", "memberId"), "not-a-uuid"),
                  (("state", "interactionId"), "00000000-0000-0000-0000-000000000000"),
                  (("state", "interactionId"), True), (("state", "interactionId"), []),
                  (("state", "revision"), True), (("state", "revision"), -1),
-                 (("state", "revision"), 257), (("state", "revision"), 0.0),
+                 (("state", "revision"), service_client.MAX_REVISION + 1), (("state", "revision"), 0.0),
+                 (("state", "progress"), True), (("state", "progress"), -1),
+                 (("state", "progress"), 1), (("state", "progress"), 0.0),
                  (("state", "status"), "unknown"), (("state", "message"), {}),
                  (("state", "message"), "x" * 513), (("state", "unexpected"), 1),
                  (("state",), []), (("unexpected",), 1)]
@@ -280,7 +336,7 @@ class ServiceClientTests(unittest.TestCase):
             with self.subTest(field=path, value=value):
                 self.assert_invalid_at("/commands", lambda reply: set_value(reply, path, value))
         for name, value in (("revision", 0), ("revision", 2), ("status", "completed"),
-                            ("interactionId", REQUEST)):
+                            ("interactionId", REQUEST), ("memberId", REQUEST)):
             def change_both(reply):
                 reply["state"][name] = value
                 reply["event"]["state"][name] = value
@@ -294,13 +350,13 @@ class ServiceClientTests(unittest.TestCase):
                  (Reply(raw=b"NaN"), "invalid_response"),
                  (Reply(raw=b"\xff"), "invalid_response"),
                  (Reply({}, headers={"Content-Type": "text/html"}), "invalid_response"),
-                 (Reply({"protocolVersion": 1, "requestId": None,
+                 (Reply({"protocolVersion": 2, "requestId": None,
                          "error": "untrusted secret from peer"}, status=500), "server_rejected"),
-                 (Reply({"protocolVersion": 1, "requestId": None,
+                 (Reply({"protocolVersion": 2, "requestId": None,
                          "error": "invalid_credentials"}, status=401), "invalid_credentials"),
                  (Reply({"protocolVersion": True, "requestId": None,
                          "error": "invalid_credentials"}, status=401), "invalid_response"),
-                 (Reply({"protocolVersion": 1, "requestId": INTERACTION,
+                 (Reply({"protocolVersion": 2, "requestId": INTERACTION,
                          "error": "invalid_credentials"}, status=401), "invalid_response")]
         for reply, expected in cases:
             with self.subTest(expected=expected, status=reply.status), \
@@ -327,7 +383,7 @@ class ServiceClientTests(unittest.TestCase):
 
     def test_http_redirect_is_never_followed(self):
         with Peer() as target:
-            redirect = Reply({"protocolVersion": 1, "requestId": None, "error": "redirect"},
+            redirect = Reply({"protocolVersion": 2, "requestId": None, "error": "redirect"},
                              status=307, headers={"Location": f"http://127.0.0.1:{target.port}/sessions"})
             with Peer(lambda *_: redirect) as peer:
                 self.assert_error("server_rejected", lambda: peer.client().probe(REQUEST))
@@ -342,7 +398,7 @@ class ServiceClientTests(unittest.TestCase):
                            "all_proxy": endpoint, "ALL_PROXY": endpoint,
                            "no_proxy": "", "NO_PROXY": ""}
             with patch.dict(os.environ, environment):
-                self.assertEqual(peer.client().probe(REQUEST), (MESSAGE, 1))
+                self.assertEqual(peer.client().probe(REQUEST), state(1, MESSAGE))
             self.assertEqual(proxy.requests, [])
 
     def test_slow_drip_has_absolute_deadline_even_when_each_byte_arrives_in_time(self):
@@ -367,7 +423,49 @@ class ServiceClientTests(unittest.TestCase):
     def test_initial_cancellation_makes_no_http_request(self):
         with Peer() as peer:
             self.assert_error("cancelled", lambda: peer.client().probe(REQUEST, lambda: True))
+            self.assert_error("cancelled", lambda: peer.client().state(lambda: True))
             self.assertEqual(peer.requests, [])
+
+    def test_cancellation_during_connect_stops_before_snapshot(self):
+        cancelled = threading.Event()
+
+        def respond(method, path, body):
+            cancelled.set()
+            return Reply(fixture(path, body))
+
+        with Peer(respond) as peer:
+            self.assert_error("cancelled", lambda: peer.client().state(cancelled.is_set))
+        self.assertEqual([request[1] for request in peer.requests], ["/sessions"])
+
+    def test_cancelled_state_read_discards_snapshot_without_mutation(self):
+        cancelled = threading.Event()
+
+        def respond(method, path, body):
+            if path == "/state":
+                cancelled.set()
+            return Reply(fixture(path, body))
+
+        with Peer(respond) as peer:
+            self.assert_error("cancelled", lambda: peer.client().state(cancelled.is_set))
+        self.assertEqual([request[1] for request in peer.requests], ["/sessions", "/state"])
+
+    def test_state_read_renews_restarted_session_and_never_sends_a_command(self):
+        snapshots = 0
+
+        def respond(method, path, body):
+            nonlocal snapshots
+            if path == "/state":
+                snapshots += 1
+                if snapshots == 1:
+                    return Reply({"protocolVersion": 2, "requestId": None,
+                                  "error": "invalid_session"}, status=401)
+            return Reply(fixture(path, body))
+
+        with Peer(respond) as peer:
+            client = peer.client()
+            client.token = TOKEN
+            self.assertEqual(client.state(), state())
+        self.assertEqual([request[1] for request in peer.requests], ["/state", "/sessions", "/state"])
 
     def test_cancellation_during_snapshot_prevents_mutation(self):
         cancelled = threading.Event()
@@ -389,12 +487,12 @@ class ServiceClientTests(unittest.TestCase):
             if path == "/state":
                 snapshots += 1
                 if snapshots == 1:
-                    return Reply({"protocolVersion": 1, "requestId": None,
+                    return Reply({"protocolVersion": 2, "requestId": None,
                                   "error": "expired_session"}, status=401)
             return Reply(fixture(path, body))
 
         with Peer(respond) as peer:
-            self.assertEqual(peer.client().probe(REQUEST), (MESSAGE, 1))
+            self.assertEqual(peer.client().probe(REQUEST), state(1, MESSAGE))
         self.assertEqual([request[1] for request in peer.requests],
                          ["/sessions", "/state", "/sessions", "/state", "/commands"])
 
@@ -404,7 +502,7 @@ class ServiceClientTests(unittest.TestCase):
         def respond(method, path, body):
             if path == "/state":
                 cancelled.set()
-                return Reply({"protocolVersion": 1, "requestId": None,
+                return Reply({"protocolVersion": 2, "requestId": None,
                               "error": "expired_session"}, status=401)
             return Reply(fixture(path, body))
 
@@ -415,7 +513,7 @@ class ServiceClientTests(unittest.TestCase):
     def test_command_error_is_not_automatically_retried(self):
         def respond(method, path, body):
             if path == "/commands":
-                return Reply({"protocolVersion": 1, "requestId": body["requestId"],
+                return Reply({"protocolVersion": 2, "requestId": body["requestId"],
                               "error": "invalid_session"}, status=401)
             return Reply(fixture(path, body))
 

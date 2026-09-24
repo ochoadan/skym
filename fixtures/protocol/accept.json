@@ -1,5 +1,5 @@
 {
-  "protocolVersion": 1,
+  "protocolVersion": 2,
   "communityId": "__COMMUNITY_ID__",
   "requestId": "__REQUEST_ID__",
   "expectedRevision": 0,

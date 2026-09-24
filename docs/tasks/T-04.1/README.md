@@ -6,7 +6,7 @@ Scope: R-001–R-010 / M-01. The user requested the next step on 2026-09-22 and 
 
 An operator starts a separate local process. A synthetic client connects as a configured lab principal, accepts and completes an original salvage contract, and receives the server's configured message. Editing that message and restarting changes the returned result. The client can query state/events, reconnect, deliberately send malformed or duplicate input, and request an authenticated graceful stop.
 
-This is the service component of [M-01](../../ROADMAP.md#milestones). It uses no NMS files or game APIs. The in-game interaction remains T-04.2/T-04.3; persistence remains T-04.4. No reward amount or official currency is implemented.
+This is the service component of [M-01](../../ROADMAP.md#milestones). It uses no NMS files or game APIs. The in-game interaction remains T-04.2/T-04.3; persistence is described in [T-04.4](../T-04.4/README.md). No reward amount or official currency is implemented.
 
 ## Tooling decision — R-001
 
@@ -18,7 +18,7 @@ Selected C# 14 / .NET 10, framework-dependent. [global.json](../../../global.jso
 | TypeScript/Node.js | Installed and viable for HTTP services; would add a TypeScript build dependency if selected |
 | Rust | Installed and viable; native control is not required by this service-only increment, so its ownership/tooling costs do not yet buy a needed game capability |
 
-This is an engineering choice for the service, not a selection of a C# NMS hook. SDK/runtime and GitHub action commits, licenses, notices and reviewed primary sources are in [sources](sources.md). There are **no external application NuGet packages**. [NuGet.Config](../../../NuGet.Config) clears package sources; the SDK supplies the framework reference packs. The test executable uses the standard library, actual child processes and HTTP/TCP assertions; it is run by the command below, not discovered by `dotnet test`.
+This is an engineering choice for the service, not a selection of a C# NMS hook. SDK/runtime and GitHub action commits, licenses, notices and reviewed primary sources are in [sources](sources.md). The original M-01 increment used no external NuGet packages. T-04.4 adds pinned SQLite dependencies; [its source review](../T-04.4/sources.md) owns that selection, and [NuGet.Config](../../../NuGet.Config) now uses the official NuGet source with committed lock files. The test executable uses the standard library, actual child processes and HTTP/TCP assertions; it is run by the command below, not discovered by `dotnet test`.
 
 ## Setup, build and verify
 
@@ -26,7 +26,8 @@ Install any stable **.NET 10 SDK** from [Microsoft's .NET 10 downloads](https://
 
 ```powershell
 dotnet --version
-dotnet run --project tests/Community.Tests --configuration Release
+dotnet restore CommunityPlatform.slnx --locked-mode
+dotnet run --project tests/Community.Tests --configuration Release --no-restore
 ```
 
 The version command must report 10.0.100 or later. `dotnet run` builds the test project and its server/client references, then runs all process-level checks; build or assertion failures return nonzero. For a build without execution, use `dotnet build CommunityPlatform.slnx --configuration Release`. No custom build/run script or C# command wrapper is needed. Other operating systems have not been exercised.
@@ -60,7 +61,7 @@ The server prints JSON diagnostics to stdout. `demo` completes the selected prin
 
 With the server stopped, edit **only `completionMessage`** in `local/lab/server.json`, restart, and rerun `demo`. The returned completed state must contain the new message. Configuration reload is restart-based. Ctrl+C uses the host's normal shutdown; `stop` uses the operator key and is the reproducible automated shutdown path. The service does not keep running after the demonstration tests finish.
 
-Configuration controls the community ID, numeric loopback bind (`127.0.0.1` only), port (1024–65535), message (1–512 characters), session lifetime (1–3600 seconds), operator key and 1–8 lab principals. IDs use lowercase letters/digits/hyphens, maximum 48 characters. Keys must be distinct printable strings of 32–128 characters; initialization generates 256-bit random values. `dataDirectory` is a child path relative to the configuration; it is created as a reserved location and contains no durable state in this increment. Keep the configuration under ignored local storage.
+Configuration controls the community ID, numeric loopback bind (`127.0.0.1` only), port (1024–65535), message (1–512 characters), session lifetime (1–3600 seconds), operator key and 1–8 lab principals. IDs use lowercase letters/digits/hyphens, maximum 48 characters. Keys must be distinct printable strings of 32–128 characters; initialization generates 256-bit random values. `dataDirectory` is a child path relative to the configuration; it now contains the persistent T-04.4 database. Keep the configuration under ignored local storage.
 
 Startup returns exit 2 for invalid config or an unavailable port without printing secrets; verify the config against the example, ensure keys were initialized, check port conflicts, and confirm `dotnet --version` reports a .NET 10 SDK. The client returns exit 1 for connection/protocol failures. Run `health` to check availability. A stopped service produces a diagnostic failure; it does not fabricate a successful interaction.
 
@@ -70,7 +71,7 @@ Startup returns exit 2 for invalid config or an unavailable port without printin
 | --- | --- |
 | Wire records and strict JSON parsing | [Community.Protocol](../../../src/Community.Protocol/Wire.cs), [protocol reference](protocol.md) |
 | Configuration initialization and validation | [Configuration.cs](../../../src/Community.Server/Configuration.cs) |
-| In-memory sessions, interaction state and replay cache | [LabRuntime.cs](../../../src/Community.Server/LabRuntime.cs) |
+| Ephemeral sessions and authenticated operation dispatch | [LabRuntime.cs](../../../src/Community.Server/LabRuntime.cs) |
 | HTTP host, bounds, logs and shutdown | [Server Program.cs](../../../src/Community.Server/Program.cs) |
 | Synthetic diagnostic client | [Client Program.cs](../../../src/Community.Client/Program.cs) |
 | Process-level verification | [Community.Tests](../../../tests/Community.Tests/Program.cs) |
@@ -78,7 +79,7 @@ Startup returns exit 2 for invalid config or an unavailable port without printin
 
 HTTP/1.1 JSON is selected for these low-frequency commands. Event notifications are retrieved through a revision-based polling endpoint; no WebSocket or movement-replication transport is selected. The scoped bearer session supplies the actor; client-supplied actor/reward fields are rejected. The server owns each principal's original contract ID, transition rules and completion message. This proves authority over synthetic service records only.
 
-State, sessions, deduplication and events are memory-only. A same-principal reconnect within the process recovers state. A restart invalidates sessions and creates new interaction IDs at revision 0. At 256 successful transitions per principal the service refuses new changes until restart, retaining all successful request IDs and events instead of silently evicting replay protection. This is a bounded lab implementation, not a durable ledger. Time does not advance contracts while nobody is connected.
+The original M-01 evidence used memory-only state with a 256-command lifetime cap. Current state, events and replay records are durable under [T-04.4](../T-04.4/README.md); sessions remain ephemeral. Follow its maintenance and recovery instructions before changing a persisted database. Empty-server progress idles.
 
 The local transport enforces numeric Host matching, rejects browser-origin/fetch metadata, limits bodies/headers/connections and request rate, and does not expose remote binding through web-host environment variables. Local keys authenticate cooperative lab callers; possession is not NMS entitlement, game-action evidence or an anti-cheat root. Administrator access to the config grants shutdown and lab impersonation by design.
 
@@ -86,6 +87,6 @@ Relevant design: [authority](../../ARCHITECTURE.md#2-authority-contract), [trans
 
 ## Verification procedure — R-002–R-010
 
-The executable suite exercises configuration initialization, usable generated credentials and preservation of existing files, then a real server over loopback: configured health and version; two principals; credentials, community and expiry checks; transitions and revision conflicts; exact replay and altered-ID rejection; concurrent attempts; snapshot/event recovery; malformed/oversized/incomplete input; origin/Host and startup binding defenses; log redaction; diagnostic client behavior; graceful shutdown and same-port restart with a changed message and empty memory.
+The executable suite exercises configuration initialization, usable generated credentials and preservation of existing files, then a real server over loopback: configured health and version; two principals; credentials, community and expiry checks; transitions and revision conflicts; exact replay and altered-ID rejection; concurrent attempts; snapshot/event recovery; malformed/oversized/incomplete input; origin/Host and startup binding defenses; log redaction; diagnostic client behavior; graceful shutdown and same-port restart with a changed message and persisted state.
 
 The [workflow](../../../.github/workflows/verify.yml) runs the same `dotnet run --project tests/Community.Tests --configuration Release` command on a Windows GitHub runner with exact action commits and read-only repository permissions. Whether GitHub executed it is recorded separately from local test results.

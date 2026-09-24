@@ -11,7 +11,7 @@ using Community.Protocol;
 await using var suite = new IntegrationSuite();
 return await suite.Run();
 
-internal sealed class IntegrationSuite : IAsyncDisposable
+internal sealed partial class IntegrationSuite : IAsyncDisposable
 {
     private readonly string repository = Directory.GetCurrentDirectory();
     private readonly List<TestServer> servers = [];
@@ -22,7 +22,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
 
     public IntegrationSuite()
     {
-        runDirectory = Path.Combine(repository, "local", "t04-1", $"tests-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}");
+        runDirectory = Path.Combine(repository, "local", "t04-4", $"tests-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}");
     }
 
     public async Task<int> Run()
@@ -36,6 +36,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             await ExerciseInitialization();
             await ExerciseService();
             await ExerciseAdapter();
+            await ExercisePersistence();
             await ExerciseExpiry();
             await ExerciseConfiguration();
             await ExerciseDiagnosticClient();
@@ -111,8 +112,10 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             Require(alice.SessionId != bob.SessionId && alice.AccessToken != bob.AccessToken, "Sessions are not distinct.");
             aliceState = (await Get<StateResponse>(server, "/state", alice.AccessToken)).State;
             bobState = (await Get<StateResponse>(server, "/state", bob.AccessToken)).State;
-            Require(aliceState.InteractionId != bobState.InteractionId, "Principals share an interaction ID.");
-            Require(aliceState.Status == "available" && aliceState.Revision == 0 && bobState.Revision == 0, "Initial contract is not empty.");
+            Require(aliceState.InteractionId != bobState.InteractionId && aliceState.MemberId != Guid.Empty &&
+                bobState.MemberId != Guid.Empty && aliceState.MemberId != bobState.MemberId, "Principals share an interaction or member ID.");
+            Require(aliceState.Status == "available" && aliceState.Revision == 0 && bobState.Revision == 0 &&
+                aliceState.Progress == 0 && bobState.Progress == 0, "Initial contract is not empty.");
         });
 
         await Check("session admission rejects credentials, community, version, and empty request ID", async () =>
@@ -146,7 +149,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             [
                 "{", "null", "[]", "{}", json[..^1] + ",\"actor\":\"bob\"}",
                 json[..^1] + ",\"reward\":1000000}", json[..^1] + ",\"protocolVersion\":1}",
-                json.Replace("\"protocolVersion\":1", "\"protocolVersion\":\"1\"", StringComparison.Ordinal),
+                json.Replace($"\"protocolVersion\":{Wire.Version}", $"\"protocolVersion\":\"{Wire.Version}\"", StringComparison.Ordinal),
                 json.Replace("\"expectedRevision\":0", "\"expectedRevision\":\"0\"", StringComparison.Ordinal),
                 malicious
             ];
@@ -281,17 +284,19 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             Require(server.LogText.Contains(accept.RequestId.ToString(), StringComparison.OrdinalIgnoreCase) && server.LogText.Contains("TraceId", StringComparison.Ordinal), "Logs lack request/transport correlation.");
         });
 
-        await Check("restart on the same port starts empty and applies changed configuration", async () =>
+        await Check("restart preserves diagnostic state and replay, invalidates sessions, and applies changed configuration", async () =>
         {
-            var restarted = CreateServer("restart", server.Config with { CompletionMessage = "Changed server rule observed after restart." });
+            var restarted = CreateServer("restart", server.Config with { CompletionMessage = "Changed server rule observed after restart." }, server.ConfigurationPath);
             await restarted.Start();
             await ExpectError(restarted, "GET", "/state", null, reconnected.AccessToken, 401, "invalid_session", null);
             var session = await Connect(restarted, 0);
             var state = (await Get<StateResponse>(restarted, "/state", session.AccessToken)).State;
-            Require(state.Revision == 0 && state.Status == "available" && state.InteractionId != aliceState.InteractionId, "Restart did not start empty memory.");
-            Require((await Get<EventsResponse>(restarted, "/events?after=0", session.AccessToken)).Events.Length == 0, "Restart retained old events.");
-            var next = await SuccessfulPost<CommandResponse>(restarted, "/commands", Command(restarted, state, "accept"), session.AccessToken);
-            var final = await SuccessfulPost<CommandResponse>(restarted, "/commands", Command(restarted, next.State, "complete"), session.AccessToken);
+            Require(state.Revision == 4 && state.Status == "accepted" && state.InteractionId == aliceState.InteractionId &&
+                state.MemberId == aliceState.MemberId && state.Progress == 0, "Restart lost diagnostic identity/state or minted progress.");
+            Require((await Get<EventsResponse>(restarted, "/events?after=0", session.AccessToken)).Events.Length == 4, "Restart lost durable events.");
+            var replay = await Post(restarted, "/commands", accept, session.AccessToken);
+            Require(replay.Status == 200 && replay.Body == accepted.Body, "Restart lost the original replay response.");
+            var final = await SuccessfulPost<CommandResponse>(restarted, "/commands", Command(restarted, state, "complete"), session.AccessToken);
             Require(final.State.Message == restarted.Config.CompletionMessage && final.State.Message != completed.State.Message, "Restart ignored changed message.");
             await restarted.Stop();
             RequirePortAvailable(restarted.Config.Port);
@@ -372,7 +377,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             var response = originalReply.As<CommandResponse>();
             Require(response.ProtocolVersion == Wire.Version && response.RequestId == original.RequestId &&
                 response.CommunityId == server.Config.CommunityId, "Probe response lost envelope correlation.");
-            Require(response.State == state with { Revision = 1, Message = server.Config.CompletionMessage },
+            Require(response.State == state with { Revision = 1, Progress = 1, Message = server.Config.CompletionMessage },
                 "Probe changed status, identity, or returned the wrong configured message/revision.");
             Require(response.Event.EventId != Guid.Empty && response.Event.RequestId == original.RequestId &&
                 response.Event.EventType == "interaction.probed" && response.Event.State == response.State,
@@ -395,7 +400,8 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             var accept = Command(server, state, "accept");
             var accepted = await SuccessfulPost<CommandResponse>(server, "/commands", accept, diagnostic.AccessToken);
             Require(accepted.State.Status == "accepted" && accepted.State.Message == "" &&
-                accepted.State.Revision == state.Revision + 1, "Diagnostic accept changed its existing behavior.");
+                accepted.State.Revision == state.Revision + 1 && accepted.State.Progress == state.Progress,
+                "Diagnostic accept changed its existing behavior or changed progress.");
             state = accepted.State;
             await ExpectError(server, "POST", "/commands", accept, adapter.AccessToken, 403, "session_scope", accept.RequestId);
             Require((await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
@@ -407,12 +413,13 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             foreach (var expectedStatus in new[] { "accepted", "completed" })
             {
                 var probed = await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, state, "probe"), adapter.AccessToken);
-                Require(probed.State == state with { Revision = state.Revision + 1, Message = server.Config.CompletionMessage } &&
+                Require(probed.State == state with { Revision = state.Revision + 1, Progress = state.Progress + 1, Message = server.Config.CompletionMessage } &&
                     probed.State.Status == expectedStatus && probed.Event.EventType == "interaction.probed",
                     "Probe did not preserve the current diagnostic status.");
                 var transition = expectedStatus == "accepted" ? "complete" : "reset";
                 var changed = await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, probed.State, transition), diagnostic.AccessToken);
-                Require(changed.Event.EventType == "interaction.changed" && changed.State.Revision == probed.State.Revision + 1,
+                Require(changed.Event.EventType == "interaction.changed" && changed.State.Revision == probed.State.Revision + 1 &&
+                    changed.State.Progress == probed.State.Progress,
                     "Diagnostic transition event changed.");
                 state = changed.State;
             }
@@ -468,32 +475,34 @@ internal sealed class IntegrationSuite : IAsyncDisposable
                 "Request deduplication leaked between principals.");
         });
 
-        await Check("probe shares the 256-command bound and retains successful replay at capacity", async () =>
+        await Check("more than 256 commands retain replay and durable events page without gaps", async () =>
         {
-            while (state.Revision < 256)
+            while (state.Revision < 270)
                 state = (await SuccessfulPost<CommandResponse>(server, "/commands", Command(server, state, "probe"), adapter.AccessToken)).State;
-            var overflow = Command(server, state, "probe");
-            await ExpectError(server, "POST", "/commands", overflow, adapter.AccessToken, 429, "interaction_capacity", overflow.RequestId);
             var replay = await Post(server, "/commands", original, adapter.AccessToken);
-            Require(replay.Status == 200 && replay.Body == originalReply.Body, "Capacity evicted the first successful probe.");
-            var events = await Get<EventsResponse>(server, "/events?after=0", adapter.AccessToken);
-            Require(events.Revision == 256 && events.Events.Length == 256 &&
+            Require(replay.Status == 200 && replay.Body == originalReply.Body, "The first successful probe was evicted before retention expiry.");
+            var events = await ReadAllEvents(server, adapter.AccessToken, state.Revision);
+            Require(events.Count == 270 && events.Select(e => e.EventId).Distinct().Count() == 270 &&
+                events.Select(e => e.State.Revision).SequenceEqual(Enumerable.Range(1, 270).Select(n => (long)n)) &&
                 (await Get<StateResponse>(server, "/state", adapter.AccessToken)).State == state,
-                "Capacity rejection changed state or event retention.");
+                "Paged events omitted, duplicated, or reordered a committed mutation.");
         });
 
-        await Check("adapter server restart invalidates sessions and interaction IDs and returns changed configuration", async () =>
+        await Check("adapter server restart preserves member, progress, events and replay while applying changed configuration", async () =>
         {
             await server.Stop();
-            var restarted = CreateServer("adapter-restart", server.Config with { CompletionMessage = "Changed adapter response after service restart." });
+            var restarted = CreateServer("adapter-restart", server.Config with { CompletionMessage = "Changed adapter response after service restart." }, server.ConfigurationPath);
             await restarted.Start();
             await ExpectError(restarted, "GET", "/state", null, adapter.AccessToken, 401, "invalid_session", null);
             var session = await Connect(restarted, 0, compatibility);
             var fresh = (await Get<StateResponse>(restarted, "/state", session.AccessToken)).State;
-            Require(fresh.Revision == 0 && fresh.Message == "" && fresh.InteractionId != state.InteractionId, "Restart retained adapter memory.");
-            await ExpectError(restarted, "POST", "/commands", original, session.AccessToken, 404, "unknown_interaction", original.RequestId);
+            Require(fresh == state, "Restart lost acknowledged adapter state.");
+            var replay = await Post(restarted, "/commands", original, session.AccessToken);
+            Require(replay.Status == 200 && replay.Body == originalReply.Body, "Restart lost exact probe replay.");
+            var events = await ReadAllEvents(restarted, session.AccessToken, state.Revision);
+            Require(events.Count == 270 && events[^1].State == state, "Restart lost paged durable events.");
             var response = await SuccessfulPost<CommandResponse>(restarted, "/commands", Command(restarted, fresh, "probe"), session.AccessToken);
-            Require(response.State.Revision == 1 && response.State.Status == "available" &&
+            Require(response.State.Revision == state.Revision + 1 && response.State.Progress == state.Progress + 1 && response.State.Status == "available" &&
                 response.State.Message == restarted.Config.CompletionMessage && response.State.Message != state.Message,
                 "Adapter probe ignored changed server configuration.");
             await restarted.Stop();
@@ -534,7 +543,7 @@ internal sealed class IntegrationSuite : IAsyncDisposable
             {
                 var server = CreateServer(variant.Name, variant.Config);
                 await server.StartRejected();
-                Require(server.ExitCode == 2 && server.LogText.Contains("Startup failed", StringComparison.Ordinal), "Invalid startup did not fail with the documented exit.");
+                Require(server.ExitCode == 2 && server.LogText.Contains("Startup or storage operation failed", StringComparison.Ordinal), "Invalid startup did not fail with the documented exit.");
             }
             RequirePortAvailable(baseline.Port);
             var duplicate = CreateServer("duplicate-config", NewConfig());
@@ -600,12 +609,12 @@ internal sealed class IntegrationSuite : IAsyncDisposable
         Console.WriteLine($"PASS {name}");
     }
 
-    private TestServer CreateServer(string name, ServerConfig? config = null)
+    private TestServer CreateServer(string name, ServerConfig? config = null, string? configurationPath = null)
     {
         config ??= NewConfig();
         secrets.Add(config.AdminKey);
         foreach (var principal in config.Principals) secrets.Add(principal.Key);
-        var server = new TestServer(repository, Path.Combine(runDirectory, name), config);
+        var server = new TestServer(repository, Path.Combine(runDirectory, name), config, configurationPath);
         servers.Add(server);
         return server;
     }
@@ -729,15 +738,18 @@ internal sealed class TestServer : IAsyncDisposable
     private Task<string>? standardError;
     private bool logsSaved;
     public ServerConfig Config { get; }
+    public string ConfigurationPath { get; }
+    public string DatabasePath => Path.Combine(Path.GetDirectoryName(ConfigurationPath)!, Config.DataDirectory, "community.sqlite3");
     public HttpClient Client { get; }
     public string LogText { get; private set; } = "";
     public int? ExitCode => process is { HasExited: true } ? process.ExitCode : null;
 
-    public TestServer(string repository, string directory, ServerConfig config)
+    public TestServer(string repository, string directory, ServerConfig config, string? configurationPath = null)
     {
         this.repository = repository;
         this.directory = directory;
         Config = config;
+        ConfigurationPath = configurationPath ?? Path.Combine(directory, "server.json");
         Client = new(new SocketsHttpHandler { UseProxy = false, AllowAutoRedirect = false })
         {
             BaseAddress = new Uri($"http://127.0.0.1:{config.Port}"), Timeout = TimeSpan.FromSeconds(10)
@@ -773,7 +785,7 @@ internal sealed class TestServer : IAsyncDisposable
     private async Task Launch(string? rawConfiguration, Dictionary<string, string>? environment)
     {
         Directory.CreateDirectory(directory);
-        var configurationPath = Path.Combine(directory, "server.json");
+        var configurationPath = ConfigurationPath;
         await File.WriteAllTextAsync(configurationPath, rawConfiguration ?? JsonSerializer.Serialize(Config, Wire.Json));
         var start = new ProcessStartInfo(DotnetHost())
         {
@@ -877,6 +889,50 @@ internal sealed class TestServer : IAsyncDisposable
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         await process!.WaitForExitAsync(deadline.Token);
         await SaveLogs();
+    }
+
+    public async Task Kill()
+    {
+        IntegrationSuite.Require(process is { HasExited: false }, "Child was not running before abrupt termination.");
+        process!.Kill(entireProcessTree: true);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+        await process.WaitForExitAsync(deadline.Token);
+        await SaveLogs();
+    }
+
+    public async Task<(int ExitCode, string Output)> RunManagement(string operation, string? path = null)
+    {
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(ConfigurationPath, JsonSerializer.Serialize(Config, Wire.Json));
+        var start = new ProcessStartInfo(DotnetHost())
+        {
+            WorkingDirectory = repository, UseShellExecute = false, CreateNoWindow = true,
+            RedirectStandardOutput = true, RedirectStandardError = true
+        };
+        start.ArgumentList.Add(Path.Combine(repository, "src", "Community.Server", "bin", "Release", "net10.0", "Community.Server.dll"));
+        start.ArgumentList.Add(operation);
+        if (path is not null) start.ArgumentList.Add(path);
+        start.ArgumentList.Add("--config");
+        start.ArgumentList.Add(ConfigurationPath);
+        using var child = Process.Start(start) ?? throw new InvalidOperationException("Could not start storage maintenance command.");
+        var output = child.StandardOutput.ReadToEndAsync();
+        var errors = child.StandardError.ReadToEndAsync();
+        try
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await child.WaitForExitAsync(deadline.Token);
+            var text = await output + await errors;
+            await File.AppendAllTextAsync(Path.Combine(directory, "maintenance.log"), text);
+            return (child.ExitCode, text);
+        }
+        finally
+        {
+            if (!child.HasExited)
+            {
+                child.Kill(entireProcessTree: true);
+                await child.WaitForExitAsync();
+            }
+        }
     }
 
     private async Task SaveLogs()

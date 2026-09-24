@@ -5,7 +5,7 @@ namespace Community.Protocol;
 
 public static class Wire
 {
-    public const int Version = 1;
+    public const int Version = 2;
     public const int BodyLimit = 4096;
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -59,7 +59,7 @@ public sealed record AdapterCompatibility(string AdapterVersion, string GameSha2
 public sealed record SessionResponse(int ProtocolVersion, Guid RequestId, string CommunityId, Guid SessionId, string AccessToken, DateTimeOffset ExpiresAt);
 public sealed record CommandRequest(int ProtocolVersion, string CommunityId, Guid RequestId, long ExpectedRevision, string CommandType, CommandPayload Payload);
 public sealed record CommandPayload(Guid InteractionId);
-public sealed record InteractionState(Guid InteractionId, long Revision, string Status, string Message);
+public sealed record InteractionState(Guid InteractionId, long Revision, string Status, string Message, Guid MemberId, long Progress);
 public sealed record StateResponse(int ProtocolVersion, string CommunityId, InteractionState State);
 public sealed record StateEvent(Guid EventId, Guid RequestId, string EventType, InteractionState State);
 public sealed record EventsResponse(int ProtocolVersion, string CommunityId, StateEvent[] Events, long Revision);
