@@ -1,24 +1,35 @@
-# NMS Community Platform
+<h1 align="center">
+  <img src="assets/brand/skym-primary-lockup-for-dark-bg.svg" alt="SkyM" width="420">
+</h1>
+
+<p align="center">
+  <a href="docs/PRODUCT.md">Product</a> &nbsp;·&nbsp;
+  <a href="docs/STEPS.md">Status</a> &nbsp;·&nbsp;
+  <a href="docs/ROADMAP.md">Roadmap</a> &nbsp;·&nbsp;
+  <a href="#implementation-entry-points">Implementation</a> &nbsp;·&nbsp;
+  <a href="#getting-started-and-documentation">Documentation</a>
+</p>
 
 ## What we're building
 
 A FiveM-style platform for **No Man's Sky**, intended to let operators run persistent communities, creators build custom rules and activities, and players join distinct multiplayer experiences with community progression.
 
-The working name describes the project; it is not a cleared public brand. This is an independent project, with no claimed affiliation with Hello Games or Cfx.re.
-
 ## Current state
 
 The product scope, research foundation, and proposed architecture are documented. [T-03.1 is complete](docs/tasks/T-03.1/evidence-2026-09-21.md#result-and-limits): repeated native game actions, saving and reloading across restarts, and recovery from a backup were verified using a disposable save on one Windows Steam installation.
 
-A local standalone server and diagnostic client are implemented in C#/.NET. An experimental Python adapter connects native chat input to the server and retrieves its response inside NMS. [STEPS](docs/STEPS.md#current-status) holds delivery status, verification limits and completion evidence.
+A local standalone server and diagnostic client are implemented in **C#/.NET**. An experimental **Python adapter** connects native chat input to the server and retrieves its response inside NMS. [STEPS](docs/STEPS.md#current-status) holds delivery status, verification limits and completion evidence.
 
 ## Implementation entry points
 
-[T-04.4](docs/tasks/T-04.4/README.md) documents current persistent progress, read-only chat queries, database backup/restore and restart verification.
+| Entry point | Covers |
+| --- | --- |
+| [T-04.4](docs/tasks/T-04.4/README.md) | Current persistent progress, read-only chat queries, database backup/restore and restart verification |
+| [T-04.1](docs/tasks/T-04.1/README.md) | The local server |
+| [T-04.2](docs/tasks/T-04.2/README.md) | Native adapter guards and disposable-save setup |
+| [T-04.3](docs/tasks/T-04.3/README.md) | Connected chat operation, commands and game checks |
 
-[T-04.1](docs/tasks/T-04.1/README.md) documents the local server. [T-04.2](docs/tasks/T-04.2/README.md) documents the native adapter guards and disposable-save setup. [T-04.3](docs/tasks/T-04.3/README.md) documents the connected chat operation, commands and game checks.
-
-The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. Follow [STEPS](docs/STEPS.md) for the current implementation task and its prerequisites.
+> The first playable goal is [one player connected to their own server](docs/PRODUCT.md#proposed-first-playable-milestone-one-player-and-their-server), performing an in-game action and seeing a result determined by that server. Follow [STEPS](docs/STEPS.md) for the current implementation task and its prerequisites.
 
 ## Getting started and documentation
 
@@ -37,4 +48,6 @@ Open this repository in an editor to review the documents; no game installation 
 | [DECISIONS](DECISIONS.md) | Recorded choices, reasons, and revisions |
 | [AGENTS](AGENTS.md) | Working instructions and document ownership |
 
-See [LICENSE](LICENSE) for licensing terms.
+---
+
+This is an independent project, with no claimed affiliation with Hello Games or Cfx.re. See [LICENSE](LICENSE) for licensing terms.
