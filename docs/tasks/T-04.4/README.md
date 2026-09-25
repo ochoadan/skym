@@ -6,7 +6,7 @@ Scope: R-031–R-040 / E-10 persistence extension. Started 2026-09-23 at the use
 
 Submit `/community`, then `/community result` within 20 seconds. Each successful server `probe` increments the configured member's `progress` by one. Read it without mutation using `/community state`, then `/community result`. Close the game, restart the now-empty service, launch and attach again, and read the same value before performing another action. The next action must increase it exactly once. This count represents accepted community chat interactions, not salvage, native inventory, currency, or proof of a physical game action.
 
-The adapter still uses the two native chat hooks and fresh-callback presentation established by [T-04.3](../T-04.3/README.md). Network work and storage remain outside native callbacks. Adapter version `0.3.0`, operation `native-chat-poll-v2`, and protocol version 2 are a coordinated upgrade; older clients are refused. The game fingerprint remains unchanged.
+This task used the two native chat hooks and fresh-callback presentation established by [T-04.3](../T-04.3/README.md). Network work and storage remain outside native callbacks. T-04.4 introduced adapter version `0.3.0`, operation `native-chat-poll-v2`, and protocol version 2 as a coordinated upgrade. Current admission values are owned by the [compatibility manifest](../../../config/adapter-compatibility.json); [T-04.5](../T-04.5/README.md) subsequently extends the adapter while preserving the manual mode. The game fingerprint remains unchanged.
 
 ## Storage, identity and recovery contract
 

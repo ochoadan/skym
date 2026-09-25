@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from preflight import inspect_executable, SIGNATURES
 
 
-def check_process(pid: int):
+def check_process(pid: int, *, observe_world: bool = False, validate_world: bool = False):
     # These imports do not install hooks or inject Python.
     import psutil
     import pymem
@@ -23,7 +23,11 @@ def check_process(pid: int):
         values = [node.get("value") for node in settings.iter("Property") if node.get("name") == key]
         if values != ["false"]:
             raise ValueError(f"The lab requires {key}=false in the recorded game settings")
-    report = inspect_executable(path)
+    signatures = SIGNATURES
+    if observe_world or validate_world:
+        from world_observation import SIGNATURES as world_signatures
+        signatures = {**SIGNATURES, **world_signatures}
+    report = inspect_executable(path, signatures)
     if not report["eligible"]:
         raise ValueError(f"Executable preflight refused: {report}")
     memory = pymem.Pymem(pid)
@@ -32,7 +36,7 @@ def check_process(pid: int):
         if module is None:
             raise ValueError("NMS executable module is absent")
         rvas = {}
-        for name, signature in SIGNATURES.items():
+        for name, signature in signatures.items():
             pattern = b"".join(b"." if s in ("?", "??") else
                                re.escape(bytes.fromhex(s)) for s in signature.split())
             matches = pymem.pattern.pattern_scan_module(
@@ -42,6 +46,9 @@ def check_process(pid: int):
             if actual != expected or len(actual) != 1:
                 raise ValueError(f"Live signature refused: {name}; count={len(actual)}")
             rvas[name] = actual[0]
+        if validate_world:
+            from native_state import validate_layout
+            report["native_state"] = validate_layout(path, memory.read_bytes, module.lpBaseOfDll)
         return report, rvas
     finally:
         memory.close_process()

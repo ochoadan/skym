@@ -4,6 +4,10 @@ import threading
 
 
 class Interaction:
+    @property
+    def enabled(self):
+        return self._enabled
+
     def __init__(self, emit, bridge=None):
         self._local = threading.local()
         self._emit = emit
@@ -12,7 +16,7 @@ class Interaction:
         self._bridge = bridge
         if bridge is not None:
             from bridge import COMMANDS
-            self._commands = COMMANDS
+            self._commands = getattr(bridge, "commands", COMMANDS)
         else:
             self._commands = (b"/community", b"/community off")
 

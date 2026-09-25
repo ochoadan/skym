@@ -160,12 +160,15 @@ def _runtime_functions(data: bytes, sections: list[_Section], rva: int, size: in
     return functions
 
 
-def inspect_executable(path: Path) -> dict:
+def inspect_executable(path: Path, signatures: dict[str, str] | None = None) -> dict:
     """Return a fail-closed report; never launch, load, or alter the executable."""
+    signatures = SIGNATURES if signatures is None else signatures
+    if not signatures:
+        raise ValueError("At least one reviewed signature is required.")
     report = {
         "sha256": None,
         "machine": None,
-        "signatures": {name: {"count": 0, "rvas": []} for name in SIGNATURES},
+        "signatures": {name: {"count": 0, "rvas": []} for name in signatures},
         "eligible": False,
         "errors": [],
     }
@@ -179,7 +182,7 @@ def inspect_executable(path: Path) -> dict:
         report["errors"].append("Executable SHA-256 is outside the candidate allowlist.")
     try:
         sections, exception_rva, exception_size = _parse_pe(data, report)
-        for name, signature in SIGNATURES.items():
+        for name, signature in signatures.items():
             length = len(signature.split())
             rvas = []
             for section in sections:
@@ -195,7 +198,7 @@ def inspect_executable(path: Path) -> dict:
                          for section in sections):
                 report["errors"].append(f"{name}: signature is outside an executable section.")
         functions = _runtime_functions(data, sections, exception_rva, exception_size)
-        for name, signature in SIGNATURES.items():
+        for name, signature in signatures.items():
             matches = report["signatures"][name]["rvas"]
             if len(matches) == 1:
                 rva = matches[0]
@@ -210,8 +213,13 @@ def inspect_executable(path: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--exe", required=True, type=Path, help="Owned executable to inspect without launching")
+    parser.add_argument("--observe-world", action="store_true", help="Include the four T-04.5 observation hooks")
     arguments = parser.parse_args()
-    report = inspect_executable(arguments.exe)
+    signatures = SIGNATURES
+    if arguments.observe_world:
+        from world_observation import SIGNATURES as world_signatures
+        signatures = {**SIGNATURES, **world_signatures}
+    report = inspect_executable(arguments.exe, signatures)
     print(json.dumps(report, indent=2))
     return 0 if report["eligible"] else 2
 

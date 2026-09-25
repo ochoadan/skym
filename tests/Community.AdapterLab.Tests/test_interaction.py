@@ -58,6 +58,22 @@ class InteractionTests(unittest.TestCase):
         self.probe.end()
         self.assertEqual(self.events[-1][0], "disabled")
 
+    def test_cockpit_arm_is_opt_in_and_forwards_once_through_native_reply(self):
+        from bridge import COMMANDS
+        from unittest.mock import Mock
+        facade = Mock(commands=COMMANDS + (b"/community arm",))
+        facade.handle.return_value = b"Armed."
+        interaction = Interaction(lambda *args, **fields: None, facade)
+        self.probe.begin(b"/community arm")
+        self.assertIsNone(self.probe.reply(True))
+        self.probe.end()
+        interaction.begin(b"/community arm")
+        self.assertIsNone(interaction.reply(False))
+        self.assertEqual(interaction.reply(True), b"Armed.")
+        self.assertIsNone(interaction.reply(True))
+        interaction.end()
+        facade.handle.assert_called_once_with(b"/community arm")
+
 
 if __name__ == "__main__":
     unittest.main()

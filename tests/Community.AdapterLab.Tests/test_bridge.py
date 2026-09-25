@@ -91,10 +91,10 @@ class BridgeTests(unittest.TestCase):
             bridge._thread.join(3)
             self.assertFalse(bridge._thread.is_alive(), "Bridge worker leaked after test cleanup")
 
-    def make_bridge(self, *replies):
+    def make_bridge(self, *replies, **options):
         client = DelayedClient(list(replies))
         bridge = Bridge(ClientConfig(18181, "test-community", "alice", "A" * 64),
-                        self.events, client=client, clock=lambda: self.now)
+                        self.events, client=client, clock=lambda: self.now, **options)
         self.fixtures.append((bridge, client))
         return bridge, client, Interaction(self.events, bridge)
 
@@ -112,6 +112,15 @@ class BridgeTests(unittest.TestCase):
             value = self.command(interaction, b"/community result")
             if value is not None and b"connecting or waiting" not in value:
                 return value
+            threading.Event().wait(0.005)
+        self.fail("Worker did not publish a response")
+
+    def wait_ready(self, bridge):
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            with bridge._lock:
+                if bridge._ready is not None:
+                    return
             threading.Event().wait(0.005)
         self.fail("Worker did not publish a response")
 
@@ -350,6 +359,197 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(value.isascii())
         for forbidden in (b"<", b">", b"\n", b"\x00"):
             self.assertNotIn(forbidden, value)
+
+    def test_poll_is_silent_while_idle_or_waiting_and_consumes_one_ready_response(self):
+        reply = Reply()
+        bridge, client, interaction = self.make_bridge(reply, automatic=True)
+        self.assertIsNone(bridge.poll())
+        self.assertFalse(bridge.busy())
+        self.command(interaction, b"/community")
+        self.assertTrue(reply.started.wait(2))
+        self.assertTrue(bridge.busy())
+        started = time.monotonic()
+        self.assertIsNone(bridge.poll())
+        self.assertLess(time.monotonic() - started, 0.5)
+        reply.release.set()
+        self.wait_ready(bridge)
+        self.assertTrue(bridge.busy())
+        self.assertEqual(bridge.poll(), b"[test-community #1 progress 1] Original server response.")
+        self.assertIsNone(bridge.poll())
+        self.assertFalse(bridge.busy())
+        self.assertEqual(client.calls, 1)
+        self.assertEqual(sum(name == "server_presentation" for name, _ in self.events.records), 1)
+
+    def test_automatic_hints_and_manual_fallback_share_single_consumption(self):
+        for consume_manually in (True, False):
+            with self.subTest(consume_manually=consume_manually):
+                reply = Reply()
+                bridge, _, interaction = self.make_bridge(reply, automatic=True)
+                initial = self.command(interaction, b"/community")
+                pending = self.command(interaction, b"/community")
+                waiting = self.command(interaction, b"/community result")
+                for text in (initial, pending, waiting):
+                    self.assertIn(b"automatically", text)
+                    self.assertNotIn(b"Use /community result", text)
+                reply.release.set()
+                self.wait_ready(bridge)
+                result = (self.command(interaction, b"/community result") if consume_manually
+                          else bridge.poll())
+                self.assertIn(b"Original server response", result)
+                self.assertIsNone(bridge.poll())
+                self.assertIn(b"No community result", self.command(interaction, b"/community result"))
+        self.assertEqual(sum(name == "server_presentation" for name, _ in self.events.records), 2)
+
+    def test_poll_and_manual_result_race_does_not_duplicate_presentation(self):
+        reply = Reply()
+        bridge, _, interaction = self.make_bridge(reply, automatic=True)
+        self.command(interaction, b"/community")
+        reply.release.set()
+        self.wait_ready(bridge)
+        barrier = threading.Barrier(3)
+        results = []
+
+        def consume(manual):
+            barrier.wait(2)
+            results.append(bridge.handle(b"/community result") if manual else bridge.poll())
+
+        workers = [threading.Thread(target=consume, args=(manual,)) for manual in (True, False)]
+        for worker in workers:
+            worker.start()
+        barrier.wait(2)
+        for worker in workers:
+            worker.join(2)
+            self.assertFalse(worker.is_alive())
+        self.assertEqual(sum(value is not None and b"Original server response" in value for value in results), 1)
+        self.assertEqual(sum(name == "server_presentation" for name, _ in self.events.records), 1)
+        self.assertIsNone(bridge.poll())
+
+    def test_contended_poll_busy_and_cancellation_return_without_changing_pending_work(self):
+        reply = Reply()
+        bridge, _, interaction = self.make_bridge(reply, automatic=True)
+        self.command(interaction, b"/community")
+        self.assertTrue(reply.started.wait(2))
+        with bridge._lock:
+            generation = bridge._generation
+            started = time.monotonic()
+            self.assertIsNone(bridge.poll())
+            self.assertTrue(bridge.busy())
+            self.assertFalse(bridge.cancel_pending())
+            self.assertLess(time.monotonic() - started, 0.5)
+            self.assertEqual(bridge._generation, generation)
+            self.assertFalse(reply.cancelled())
+        self.assertTrue(bridge.cancel_pending())
+        self.assertTrue(reply.cancelled())
+        reply.release.set()
+        self.assertTrue(self.events.wait("late_response_discarded"))
+        self.assertIsNone(bridge.poll())
+
+    def test_lifecycle_cancellation_discards_late_success_and_allows_new_generation(self):
+        old = Reply(service_result("Old success must disappear.", 1))
+        new = Reply(service_result("New generation.", 2))
+        bridge, client, interaction = self.make_bridge(old, new, automatic=True)
+        self.command(interaction, b"/community")
+        self.assertTrue(old.started.wait(2))
+        started = time.monotonic()
+        self.assertTrue(bridge.cancel_pending())
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertTrue(old.cancelled())
+        self.assertIsNone(bridge.poll())
+        old.release.set()
+        self.assertTrue(self.events.wait("late_response_discarded"))
+        self.assertTrue(client.closed.wait(2))
+        deadline = time.monotonic() + 2
+        while b"connecting/sending" not in self.command(interaction, b"/community"):
+            self.assertLess(time.monotonic(), deadline)
+            threading.Event().wait(0.005)
+        self.assertTrue(new.started.wait(2))
+        self.assertFalse(new.cancelled())
+        new.release.set()
+        self.wait_ready(bridge)
+        self.assertEqual(bridge.poll(), b"[test-community #2 progress 2] New generation.")
+        cancelled = next(fields for name, fields in self.events.records if name == "request_cancelled")
+        presented = next(fields for name, fields in self.events.records if name == "server_presentation")
+        self.assertEqual(cancelled["request_id"], old.request_id)
+        self.assertEqual(presented["request_id"], new.request_id)
+        self.assertGreater(presented["generation"], cancelled["generation"])
+
+    def test_cancellation_clears_delayed_ready_reply_and_preserves_disabled_state(self):
+        reply = Reply()
+        bridge, client, interaction = self.make_bridge(reply, automatic=True, delivery_delay=10)
+        self.command(interaction, b"/community")
+        reply.release.set()
+        self.wait_ready(bridge)
+        self.assertTrue(bridge.cancel_pending())
+        self.assertTrue(client.closed.wait(2))
+        self.now += 10
+        self.assertIsNone(bridge.poll())
+        self.assertFalse(bridge._disabled)
+        self.assertIn(b"disabled", self.command(interaction, b"/community off"))
+        bridge._thread.join(3)
+        self.assertFalse(bridge._thread.is_alive())
+        self.assertTrue(bridge.cancel_pending())
+        self.assertTrue(bridge._disabled)
+        self.assertTrue(bridge.busy())
+        self.assertIsNone(bridge.poll())
+        self.assertIn(b"disabled", bridge.handle(b"/community"))
+        self.assertFalse(any(name == "server_presentation" for name, _ in self.events.records))
+
+    def test_delivery_delay_starts_at_response_and_never_delays_network_work(self):
+        reply = Reply()
+        bridge, client, interaction = self.make_bridge(reply, automatic=True, delivery_delay=4)
+        self.command(interaction, b"/community")
+        self.assertTrue(reply.started.wait(2))
+        self.now += 5
+        reply.release.set()
+        self.wait_ready(bridge)
+        self.assertEqual(client.calls, 1)
+        self.assertIsNone(bridge.poll())
+        self.now += 3.99
+        self.assertIsNone(bridge.poll())
+        self.assertIn(b"waiting", self.command(interaction, b"/community result"))
+        self.now += 0.02
+        self.assertIn(b"Original server response", bridge.poll())
+        self.assertIsNone(bridge.poll())
+        self.assertIn(b"No community result", self.command(interaction, b"/community result"))
+
+    def test_deadline_overrides_delay_and_expired_ready_success_is_never_displayed(self):
+        for operation in (b"/community", b"/community state"):
+            with self.subTest(operation=operation):
+                reply = Reply(service_result("Too late to show."))
+                bridge, _, interaction = self.make_bridge(reply, automatic=True, delivery_delay=10)
+                self.command(interaction, operation)
+                self.assertTrue(reply.started.wait(2))
+                self.now += LIFETIME - 2
+                reply.release.set()
+                self.wait_ready(bridge)
+                self.assertIsNone(bridge.poll())
+                self.now += 2
+                value = bridge.poll()
+                self.assertIn(b"expired", value)
+                self.assertNotIn(b"Too late", value)
+                self.assertEqual(b"outcome unknown" in value, operation == b"/community")
+                self.assertIsNone(bridge.poll())
+
+    def test_poll_expires_pending_request_once_and_discards_uncooperative_response(self):
+        reply = Reply(service_result("Expired success must disappear."))
+        bridge, _, interaction = self.make_bridge(reply, automatic=True, delivery_delay=10)
+        self.command(interaction, b"/community")
+        self.assertTrue(reply.started.wait(2))
+        self.now += LIFETIME
+        self.assertIn(b"expired; outcome unknown", bridge.poll())
+        self.assertTrue(reply.cancelled())
+        self.assertIsNone(bridge.poll())
+        reply.release.set()
+        self.assertTrue(self.events.wait("late_response_discarded"))
+        self.assertIsNone(bridge.poll())
+        self.assertEqual(sum(name == "request_expired" for name, _ in self.events.records), 1)
+        self.assertEqual(sum(name == "server_presentation" for name, _ in self.events.records), 1)
+
+    def test_delivery_delay_rejects_unbounded_or_non_numeric_values(self):
+        for delay in (-0.01, 10.01, float("inf"), float("nan"), "1", None, True):
+            with self.subTest(delay=delay):
+                with self.assertRaisesRegex(ValueError, "between 0 and 10"):
+                    self.make_bridge(delivery_delay=delay)
 
 
 if __name__ == "__main__":

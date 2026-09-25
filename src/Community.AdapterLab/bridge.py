@@ -31,10 +31,16 @@ class Work:
 
 
 class Bridge:
-    def __init__(self, config, emit, client=None, clock=time.monotonic):
+    def __init__(self, config, emit, client=None, clock=time.monotonic,
+                 automatic=False, delivery_delay=0.0):
+        if (not isinstance(delivery_delay, (int, float)) or isinstance(delivery_delay, bool)
+                or not 0 <= delivery_delay <= 10):
+            raise ValueError("delivery_delay must be between 0 and 10 seconds")
         self.config = config
         self.emit = emit
         self.clock = clock
+        self.automatic = automatic
+        self.delivery_delay = float(delivery_delay)
         self._client = client if client is not None else ServiceClient(config)
         self._lock = threading.Lock()
         # CPython SimpleQueue.put/get_nowait are reentrant C operations. Queue's
@@ -62,6 +68,72 @@ class Bridge:
             raise queue.Full
         self._jobs.put(work)
 
+    @staticmethod
+    def _expired_message(work):
+        return ("Community result expired; outcome unknown. Use /community state to check saved progress."
+                if work.operation == "probe" else
+                "Community state result expired. Use /community state to read again.")
+
+    def _expire_pending(self, now):
+        if self._pending and now >= self._pending.deadline:
+            expired = self._pending
+            self._invalidate()
+            self._ready = (expired, self._expired_message(expired), now)
+            self.emit("request_expired", request_id=expired.request_id, generation=expired.generation)
+
+    def _consume_ready(self, now):
+        if self._ready is None:
+            return None
+        work, message, ready_at = self._ready
+        if now < ready_at and now < work.deadline:
+            return None
+        self._ready = None
+        if now >= work.deadline:
+            message = self._expired_message(work)
+        self.emit("server_presentation", request_id=work.request_id, generation=work.generation,
+                  operation=work.operation)
+        return display(message)
+
+    def poll(self):
+        """Consume one response on a permitted callback, without waiting or idle text."""
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            if self._disabled:
+                return None
+            now = self.clock()
+            self._expire_pending(now)
+            return self._consume_ready(now)
+        finally:
+            self._lock.release()
+
+    def busy(self):
+        """Conservatively reject a new action when work or its result is outstanding."""
+        if not self._lock.acquire(blocking=False):
+            return True
+        try:
+            return (self._disabled or self._pending is not None or self._ready is not None
+                    or self._jobs.qsize() >= 1)
+        finally:
+            self._lock.release()
+
+    def cancel_pending(self):
+        """Invalidate this lifecycle's work; cancellation does not undo server commits."""
+        if not self._lock.acquire(blocking=False):
+            return False
+        try:
+            work = self._pending if self._pending else self._ready[0] if self._ready else None
+            self._invalidate()
+            self._enqueue(None)  # Close on the worker, never on an engine callback.
+            if work:
+                self.emit("request_cancelled", request_id=work.request_id, generation=work.generation,
+                          operation=work.operation)
+            self.emit("community_left", generation=self._generation, disabled=self._disabled,
+                      reason="lifecycle")
+            return True
+        finally:
+            self._lock.release()
+
     def handle(self, command):
         """Called only at a matched native system reply, with no native values."""
         if not self._lock.acquire(blocking=False):
@@ -78,26 +150,19 @@ class Bridge:
                     return b"Community adapter disabled until restart."
                 return (b"Community disconnected. Use /community to reconnect." if command == b"/community leave"
                         else b"Community reconnect queued. Use /community to send a new request.")
-            if self._pending and self.clock() >= self._pending.deadline:
-                expired = self._pending
-                self._invalidate()
-                self._ready = (expired, "Community request expired. Use /community state to check saved progress.")
-                self.emit("request_expired", request_id=expired.request_id, generation=expired.generation)
+            now = self.clock()
+            self._expire_pending(now)
             if command == b"/community result":
-                if self._ready:
-                    work, message = self._ready
-                    self._ready = None
-                    if self.clock() >= work.deadline:
-                        message = ("Community result expired; outcome unknown. Use /community state to check saved progress."
-                                   if work.operation == "probe" else
-                                   "Community state result expired. Use /community state to read again.")
-                    self.emit("server_presentation", request_id=work.request_id, generation=work.generation,
-                              operation=work.operation)
-                    return display(message)
-                return (b"Community connecting or waiting. Use /community result shortly." if self._pending
-                        else b"No community result pending. Use /community to send a request.")
+                result = self._consume_ready(now)
+                if result is not None:
+                    return result
+                if self._pending or self._ready:
+                    return (b"Community connecting or waiting. Reply will appear automatically." if self.automatic
+                            else b"Community connecting or waiting. Use /community result shortly.")
+                return b"No community result pending. Use /community to send a request."
             if self._pending or self._ready:
-                return b"Community request already pending or ready. Use /community result."
+                return (b"Community request already pending or ready. Reply will appear automatically." if self.automatic
+                        else b"Community request already pending or ready. Use /community result.")
             operation = "state" if command == b"/community state" else "probe"
             work = Work(self._generation, str(uuid.uuid4()), self.clock() + LIFETIME, threading.Event(), operation)
             try:
@@ -108,7 +173,8 @@ class Bridge:
             self.emit("server_request_queued", request_id=work.request_id, generation=work.generation,
                       community=self.config.community, operation=work.operation)
             action = "connecting/reading saved progress" if operation == "state" else "connecting/sending"
-            return display(f"Community {self.config.community}: {action}. Use /community result.")
+            hint = "Reply will appear automatically." if self.automatic else "Use /community result."
+            return display(f"Community {self.config.community}: {action}. {hint}")
         finally:
             self._lock.release()
 
@@ -148,7 +214,7 @@ class Bridge:
             with self._lock:
                 active = self._pending is work and work.generation == self._generation and not cancelled()
                 if active:
-                    self._ready = (work, text)
+                    self._ready = (work, text, self.clock() + self.delivery_delay)
                     self._pending = None
             if not active:
                 self.emit("late_response_discarded", request_id=work.request_id, generation=work.generation)

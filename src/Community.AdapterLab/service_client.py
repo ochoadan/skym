@@ -269,8 +269,8 @@ def main():
     destination = args.out.resolve()
     local = Path(__file__).resolve().parents[2] / "local"
     if not any(destination.is_relative_to(local / task) and destination != local / task
-               for task in ("t04-3", "t04-4")):
-        raise ValueError("Output must be a new file under local/t04-3 or local/t04-4")
+               for task in ("t04-3", "t04-4", "t04-5")):
+        raise ValueError("Output must be a new file under local/t04-3, local/t04-4 or local/t04-5")
     source = json.loads(args.server_config.read_text(encoding="utf-8-sig"))
     principal = next(p for p in source["principals"] if p["id"] == args.principal)
     value = {"host": source["bindAddress"], "port": source["port"], "communityId": source["communityId"],

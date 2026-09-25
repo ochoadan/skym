@@ -1,6 +1,6 @@
 # Adapter lab notices
 
-The signatures and ABI declarations in [preflight.py](preflight.py) and [probe.py](probe.py) derive from NMS.py at commit `b41bf9e6fdff1c833b77d805bb0c8da555c4ced4`. Its notice follows. Runtime dependency licenses and exact selected artifacts are recorded in the [dated source review](../../docs/tasks/T-04.2/sources.md). Installed dependencies and their notices remain in the ignored virtual environment; no dependency or game binaries are vendored here.
+The signatures and ABI declarations in [preflight.py](preflight.py), [probe.py](probe.py) and [world_observation.py](world_observation.py) derive from NMS.py at commit `b41bf9e6fdff1c833b77d805bb0c8da555c4ced4`. Its notice follows. Runtime dependency licenses and exact selected artifacts are recorded in the [dated source review](../../docs/tasks/T-04.2/sources.md). Installed dependencies and their notices remain in the ignored virtual environment; no dependency or game binaries are vendored here.
 
 ## NMS.py
 

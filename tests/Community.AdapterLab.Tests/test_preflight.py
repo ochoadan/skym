@@ -209,6 +209,24 @@ class PreflightTests(unittest.TestCase):
         self.assertIsNone(result["sha256"])
         self.assertEqual(["Executable could not be read."], result["errors"])
 
+    def test_additional_hooks_fail_closed_without_changing_chat_profile(self):
+        data = synthetic_pe()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "synthetic.exe"
+            path.write_bytes(data)
+            with patch.object(preflight, "EXPECTED_SHA256", hashlib.sha256(data).hexdigest().upper()):
+                extended = preflight.inspect_executable(path, {**preflight.SIGNATURES,
+                                                               "candidate": "DE AD BE EF"})
+                baseline = preflight.inspect_executable(path)
+        self.assertFalse(extended["eligible"])
+        self.assertEqual(0, extended["signatures"]["candidate"]["count"])
+        self.assertTrue(baseline["eligible"])
+        self.assertNotIn("candidate", baseline["signatures"])
+
+    def test_empty_signature_profile_is_not_an_eligibility_bypass(self):
+        with self.assertRaises(ValueError):
+            preflight.inspect_executable(Path("unused.exe"), {})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -47,6 +47,8 @@ The connected chat adapter, service configuration and E-10 procedure are in [T-0
 
 Current persistence setup, locked restore, maintenance and E-10 restart verification are in [T-04.4](docs/tasks/T-04.4/README.md#setup-build-and-verify).
 
+The opt-in cockpit probe, receiver validation, automatic presentation and attended procedure are in [T-04.5](docs/tasks/T-04.5/README.md#setup-build-and-verify).
+
 Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record detailed checks and limitations in the task/evidence record; link the result from STEPS.
 
 When code is introduced, put exact install, run, and verification commands in its component/task documentation and link that entry point here. Select tests for observable behavior and risks, not mechanical copies of the implementation.

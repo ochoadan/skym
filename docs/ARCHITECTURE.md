@@ -112,6 +112,8 @@ Design schema migrations with backups and a restore test. Do not automatically d
 
 Evaluate the minimum native adapter surface: game lifecycle, input/interaction event, object presentation, state application, and clean unload. Prefer a small typed interface to scattering offsets throughout resource scripts. Each operation declares its allowed thread, valid game states, supported build fingerprints, and failure behavior.
 
+The current opt-in lab operation uses guarded fresh state reads at application-update completion to present delayed replies and report one armed cockpit entry. [T-04.5](tasks/T-04.5/README.md#receiver-validation-and-selected-automatic-operation) owns its exact-build/thread contract, cancellation behavior and evidence. It supplies a cooperative observation and local presentation boundary; it does not establish gameplay authority or a general lifecycle API.
+
 Possible adapter technologies include a maintained Python hook path for exploration and a narrow native implementation for distribution. Their feasibility, license obligations, memory safety, packaging, and update burden must be measured before selection. An existing hook framework's online-functionality exclusion must be respected when choosing an upstream contribution or dependency strategy. It is not a hidden multiplayer API.
 
 Proposed resource manifest fields:
