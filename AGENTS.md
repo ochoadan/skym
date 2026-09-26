@@ -15,8 +15,8 @@ The selected product and the context behind it are in [PRODUCT](docs/PRODUCT.md)
 | `README.md` | Orientation and navigation |
 | `AGENTS.md` | Workflow and verification rules |
 | `docs/PRODUCT.md` | Users, intent, scope, product boundaries |
-| `docs/STEPS.md` | Current delivery status, dependencies, next actions, and links to completion evidence |
-| `docs/tasks/README.md` | Index of existing task documents |
+| `docs/STEPS.md` | Compact current capability status, dependencies, and the next five tasks |
+| `docs/tasks/README.md` | Entry points for task documents still used by current work |
 | `docs/tasks/<T-ID>/` | Task plans, detailed procedures, dated sources/evidence, and links to relevant architecture and implementation |
 | `docs/ROADMAP.md` | Provisional engineering breakdown, dependencies, and milestone acceptance; no competing status ledger |
 | `docs/RESEARCH.md` | Cross-cutting external findings, alternatives, costs, and links to dated source reviews |
@@ -26,6 +26,10 @@ The selected product and the context behind it are in [PRODUCT](docs/PRODUCT.md)
 | `DECISIONS.md` | Lasting decisions and reasons |
 
 Update each fact's owner and link to it elsewhere. Minimize changes to core Markdown files; keep them focused on purpose, shared constraints, summaries, status, and navigation. Put step detail in `docs/tasks/<T-ID>/`; label plans, procedures, dated sources, and observed evidence clearly. Link relevant architecture sections and real code paths when they exist. Create or split files only for useful depth; update indexes and incoming links when moving or removing them. Keep task IDs stable; STEPS holds the short queue and ROADMAP the longer-range plan.
+
+STEPS is a rolling plan: keep a compact capability baseline and five upcoming tasks. Remove completed tasks from the queue once their lasting result and remaining limitations are reflected in the appropriate reference. Do not append a completion ledger or replace it with another cumulative history table. Git history and CI retain routine change/check history; do not create a documentation row or evidence file for every edit, task, or passing test run.
+
+Keep task procedures, contracts, source reviews, and selected evidence while current operation, a capability claim, an unresolved failure, or future work relies on them. Preserve dated evidence as the result of its actual build/run; a later result must not rewrite an earlier observation. Retire superseded, unreferenced material to Git history after updating incoming links and preserving any still-useful constraints in their owning document. The task index lists working references, not every task ever completed.
 
 ## Research and implementation
 
@@ -49,7 +53,7 @@ Current persistence setup, locked restore, maintenance and E-10 restart verifica
 
 The opt-in cockpit probe, receiver validation, automatic presentation and attended procedure are in [T-04.5](docs/tasks/T-04.5/README.md#setup-build-and-verify).
 
-Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Record detailed checks and limitations in the task/evidence record; link the result from STEPS.
+Use `rg --files` to inspect the file map and `git diff --check` for tracked changes. For new files, include them in a Git comparison before relying on that command. Check that relative Markdown links resolve, STEPS matches actual artifacts, and research claims link to supporting sources. Report routine checks in the handoff or CI; retain detailed results in a task/evidence record when they support a capability claim or a failure needed for future work.
 
 When code is introduced, put exact install, run, and verification commands in its component/task documentation and link that entry point here. Select tests for observable behavior and risks, not mechanical copies of the implementation.
 
@@ -61,6 +65,6 @@ Use scripts only when necessary. Implement application behavior in code and use 
 
 Add a repeatable local build/test command with the first runnable code. Run ordinary protocol and service tests without proprietary game files; native integration evidence requires the actual game environment. Add an automated build/test workflow when the repository's hosting is configured, reusing the same local commands. Check dependency/license changes when selecting packages rather than freezing an arbitrary stack in the planning documents.
 
-At a handoff, update STEPS with the task/R-IDs, state, next action, and evidence link. Keep commands/results, failures, and build requirements in the linked task record. Record partial completion without marking the parent milestone complete. Put only original/sanitized fixtures in Git; keep runtime databases, credentials, save backups, captures, and downloaded game-derived material under ignored local storage.
+At a handoff, refresh STEPS with the current task/R-IDs, state and next action; replace completed queue entries instead of accumulating them. Link selected supporting evidence from the capability summary or working reference that needs it. Keep reusable commands, material results/failures, and build requirements in the relevant task record. Record partial completion without marking the parent milestone complete. Put only original/sanitized fixtures in Git; keep runtime databases, credentials, save backups, captures, and downloaded game-derived material under ignored local storage.
 
 Use independent agents for clearly assigned files/components when useful. Agree the shared protocol before parallel server and adapter edits; avoid two agents editing its contract simultaneously. Integrate and verify their changes before recording completion.

@@ -1,14 +1,14 @@
 # Engineering roadmap
 
-Updated: 2026-09-23.
+Updated: 2026-09-26.
 
 The intended platform lets operators run persistent No Man's Sky communities, creators define meaningful gameplay, and players join those communities inside the game. This provisional plan contains **140 engineering tasks across 14 stages**, from the first server process to a supported public release. The count describes the current breakdown; it does not establish completeness, effort, cost, or whether every proposed integration can be delivered.
 
-[PRODUCT](PRODUCT.md) owns the intended experience and the context behind this plan. [STEPS](STEPS.md) owns actual delivery status, completion evidence, and the next few detailed implementation tasks. This document owns the longer-range breakdown and proposed acceptance criteria. [ARCHITECTURE](ARCHITECTURE.md) owns the proposed design; [EXPERIMENTS](EXPERIMENTS.md) provides repeatable procedures for difficult integrations; [RESEARCH](RESEARCH.md) owns external claims and sources.
+[PRODUCT](PRODUCT.md) owns the intended experience and the context behind this plan. [STEPS](STEPS.md) owns current capability status and the next five tasks; supporting evidence stays with the relevant task record. This document owns the longer-range breakdown and proposed acceptance criteria. [ARCHITECTURE](ARCHITECTURE.md) owns the proposed design; [EXPERIMENTS](EXPERIMENTS.md) provides repeatable procedures for difficult integrations; [RESEARCH](RESEARCH.md) owns external claims and sources.
 
 ## Planning confidence and open dependencies
 
-The first proposed route is a standalone service, one real game connection, persistent reconnect, and then a second player. The service has a local verification path independent of the game. The playable milestone requires a running retail game and an adapter operation that has not yet been demonstrated.
+The route progresses from a standalone service through one real game connection and persistent reconnect to a second player. The service has a local verification path independent of the game. The narrow one-client chat, persistence, and automatic cockpit-report operations now have recorded lab evidence in the [working task references](tasks/README.md). Broader game operations and the two-client shared interaction still require their own demonstrations.
 
 Hosting mode, game authority, persistence, and player count are separate dimensions. An operator may eventually choose a listen host, a separate server process on their own PC, or a remote dedicated host where the demonstrated integration permits it. Durable state can remain idle while no players are connected and catch up on return. Recreating all native physics, procedural generation, or continuous zero-player simulation is not a prerequisite for every persistent feature.
 
@@ -17,12 +17,12 @@ The workstreams have different levels of definition. A detailed row is a propose
 | Work | What is reasonably concrete now | What remains tentative |
 | --- | --- | --- |
 | R-001–R-010: local service | A configured process, bounded protocol, synthetic client, and observable lifecycle can be specified without game access. | Selected tooling, transport and implementation evidence belong to the task records linked from STEPS. They do not settle the game-facing interface. |
-| R-011–R-040: adapter, one player, persistence | The desired in-game round trip and restart behavior have explicit proposed checks. Ordinary storage work can use original fixtures. | The first game operation, hook route, lifecycle constraints, and reliable application of server responses are unverified. |
+| R-011–R-040: adapter, one player, persistence | The exact-build chat/cockpit path and member-owned restart recovery have scoped lab evidence. Ordinary storage work can use original fixtures. | General lifecycle access, extended hardening, other builds and broader game operations remain unverified; child-task completion does not complete every acceptance item in these ranges. |
 | R-041–R-060: synchronization and session control | Shared-state, admission, ownership, and enforcement are necessary capabilities for the selected experience. | This contains the largest architectural uncertainty. Native-session dependencies and available control may change the design, task boundaries, and sequence substantially. |
 | R-061–R-110: resources, economy, installation, tools, RP | The operator/creator workflows and trust concerns identify useful work areas. | API shape, supported mechanics, packages, and interaction design depend on earlier game capabilities and outside-user experience. Specific solutions remain candidates. |
 | R-111–R-140: security, compatibility, operations, release | Security review, recovery, maintenance, pilot evidence, and release preparation are identified workstreams. | Exact tests, capacity targets, costs, operating model, and release scope depend on the implemented system. Security work also belongs in each earlier interface as it is built. |
 
-The rows mix intended outcomes with candidate technical choices. Active work receives exact implementation details and evidence in STEPS. New findings may split, replace, retire, or add work while retaining stable references. The dependency map records the current design assumptions, including integration checks that require multiple components; it is subject to the same revisions. Acceptance evidence applies to the tested build and feature scope.
+The rows mix intended outcomes with candidate technical choices. STEPS selects active work; its linked task plans hold implementation details and any retained evidence. New findings may split, replace, retire, or add work while retaining stable references. The dependency map records the current design assumptions, including integration checks that require multiple components; it is subject to the same revisions. Acceptance evidence applies to the tested build and feature scope.
 
 ## Milestones
 
@@ -157,6 +157,8 @@ Storage and transaction work can start with the Stage 1 client. Completing M-03 
 ## Stage 5 — Synchronize two players and shared interactions
 
 Needs the Stage 3 game path, Stage 4 recovery semantics, and two consenting lab clients. Use E-01 and E-04 to distinguish native replication from custom replication rather than guessing which layer owns an observed result.
+
+The next slice is planned in [STEPS](STEPS.md#next-five-tasks). It starts with a shared cooperative activity using the existing cockpit report and automatic in-game text presentation. A shared service record is distinct from the current member-owned progress and from a spawned native world object. R-042's location/reference-frame work and R-043's full entity lifecycle remain open unless demonstrated. A second-machine lab also pulls forward the required encrypted transport/server-identity subset of R-089; it must not expose the loopback HTTP configuration remotely.
 
 | ID | Concrete outcome | Observable acceptance |
 | --- | --- | --- |

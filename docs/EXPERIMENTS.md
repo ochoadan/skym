@@ -2,7 +2,7 @@
 
 These are **proposed procedures for testing capabilities**, not recorded results. [STEPS](STEPS.md) owns status, and [ROADMAP](ROADMAP.md) owns the provisional construction plan. All thresholds below are proposed acceptance targets, not measured performance. Results provide evidence about a specific approach and may affect its implementation, the architecture, or the planned scope.
 
-IDs are stable references. The current queue uses E-01a, the needed parts of E-02/E-03, and the one-player loop E-10. E-05 includes checks that can use original data without a game client. E-01b/E-04 need multiple game clients. Later tests cover enforcement, independent rule behavior, and broader operation; their prerequisites differ by the claim being tested.
+IDs are stable references. The [current queue](STEPS.md#next-five-tasks) builds on the scoped E-01a/E-03/E-10 results and moves to E-01b/E-04 with two real clients. E-05 contributes applicable transaction checks with original data; using those checks does not establish a credit ledger or complete that experiment. Later tests cover enforcement, independent rule behavior, and broader operation; their prerequisites differ by the claim being tested.
 
 ## Lab prerequisites and evidence
 
@@ -10,7 +10,7 @@ Begin with one owned Windows game installation, an exact storefront build, and a
 
 Review the intended scope and applicable terms before invasive integration experiments. Publisher clarification is a separate workstream; it does not block reading documentation or preparing a simulation with original data. Do not use public players or live economies as test subjects. Network-condition changes must affect only the lab clients and be restored afterwards.
 
-A completed experiment produces a dated, redacted `evidence-<date>.md` in its `docs/tasks/<T-ID>/` folder with this format:
+A result retained to support a capability claim, compatibility boundary, recovery procedure, or unresolved failure belongs in a dated, redacted `evidence-<date>.md` in its `docs/tasks/<T-ID>/` folder with this format. Group related runs under the claim they test; do not create one report per routine check or duplicate a chronological ledger in STEPS.
 
 ```text
 Experiment ID and run date:

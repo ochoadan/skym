@@ -26,7 +26,7 @@ Date: 2026-09-20; framing clarified 2026-09-21. A runnable service and a one-pla
 
 ## D-007 — Show the longer-range roadmap and keep a small active queue
 
-Date: 2026-09-20; framing clarified 2026-09-21. ROADMAP owns the long-range engineering breakdown; STEPS owns progress and the next few detailed tasks, currently five. The original broad work packages remain parent records with stable IDs. The 140 rows make anticipated work visible; they are neither proof of completeness nor a required count. ROADMAP records which parts have concrete local checks and which depend on untested integration assumptions.
+Date: 2026-09-20; framing clarified 2026-09-21; retention clarified 2026-09-26. ROADMAP owns the long-range engineering breakdown; STEPS holds a compact capability baseline and the next five tasks. Completed queue entries and routine completion/check chronology leave the live plan; Git history and CI retain that history. Keep task records and selected evidence only while operation, capability claims, unresolved failures, or future work rely on them, without another cumulative completion index. The original broad work packages retain stable IDs. The 140 rows make anticipated work visible; they are neither proof of completeness nor a required count. ROADMAP records which parts have concrete local checks and which depend on untested integration assumptions.
 
 ## D-008 — Propose a local service as the first build increment
 
